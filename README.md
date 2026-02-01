@@ -266,6 +266,7 @@ sudo ./install_ft710.sh
 * Creates `/dev/et-cat` and `/dev/et-audio` symlinks
 * Patches EmComm Tools for FT-710 support
 * Automatic backup creation
+* Alsa Configuration
 
 **Backup Location:**
 ```bash
