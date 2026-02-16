@@ -1,0 +1,28 @@
+# macOS
+.DS_Store
+
+# Windows junk
+Thumbs.db
+
+# Logs
+*.log
+
+# Env / secrets
+.env
+.env.*
+
+# IDE/editor
+.vscode/
+.idea/
+
+# Node
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+
+# Docker
+*.pid
+*.sock
+
