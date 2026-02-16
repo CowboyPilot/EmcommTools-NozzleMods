@@ -27,7 +27,7 @@ set -euo pipefail
 VERSION="1.3.0"
 
 PREFIX="${HOME}/.wine32"
-WINLINK_ZIP_URL="https://downloads.winlink.org/User%20Programs/Winlink_Express_install_1-7-28-0.zip"
+WINLINK_ZIP_URL="https://downloads.winlink.org/User%20Programs/Winlink_Express_install_1-7-29-0.zip"
 WINLINK_ZIP_FILE="Winlink_Express.zip"
 USER_CONFIG="${HOME}/.config/emcomm-tools/user.json"
 VARA_KEY_FILE="${HOME}/vara_key"
