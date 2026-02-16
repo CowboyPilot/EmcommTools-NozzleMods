@@ -266,7 +266,11 @@ sudo ./install_ft710.sh
 * Creates `/dev/et-cat` and `/dev/et-audio` symlinks
 * Patches EmComm Tools for FT-710 support
 * Automatic backup creation
+<<<<<<< HEAD
 * ALSA MIXER profile now loads when et-mode is run
+=======
+* Alsa Configuration Updated
+>>>>>>> origin/main
 
 **Backup Location:**
 ```bash
