@@ -597,7 +597,7 @@ launch_vara_installer() {
       echo -e "${RED}ERROR: Installer not found at ${NOZZLE_DIR}/wine-tools/wine-setup.sh${NC}"
       echo
       echo "Please run the NozzleMods installer first:"
-      echo "  curl -fsSL https://raw.githubusercontent.com/CowboyPilot/ETC5_NozzleMods/main/install.sh | bash"
+      echo "  curl -fsSL https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install.sh | bash"
       echo
       read -r -p "Press Enter to return to menu..."
     fi
@@ -744,7 +744,7 @@ update_nozzle_tools() {
     
     local temp_installer="/tmp/nozzle-install-update.sh"
     
-    if curl -fsSL "https://raw.githubusercontent.com/CowboyPilot/ETC5_NozzleMods/main/install.sh" -o "${temp_installer}"; then
+    if curl -fsSL "https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install.sh" -o "${temp_installer}"; then
       chmod +x "${temp_installer}"
       echo
       echo "Running installer..."

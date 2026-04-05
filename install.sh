@@ -9,10 +9,10 @@
 #   - linux-tools/ → ~/NozzleMods/linux-tools/
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/CowboyPilot/ETC5_NozzleMods/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install.sh | bash
 #
 # Or download and run:
-#   wget https://raw.githubusercontent.com/CowboyPilot/ETC5_NozzleMods/main/install.sh
+#   wget https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install.sh
 #   chmod +x install.sh
 #   ./install.sh
 ################################################################################
@@ -20,7 +20,7 @@
 set -euo pipefail
 
 # GitHub repository
-REPO_URL="https://github.com/CowboyPilot/ETC5_NozzleMods.git"
+REPO_URL="https://github.com/CowboyPilot/EmcommTools-NozzleMods.git"
 REPO_BRANCH="main"
 
 # Colors for output

@@ -5,13 +5,13 @@ A comprehensive collection of scripts and tools to enhance EmComm Tools R5 with 
 ## Quick Installation
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/CowboyPilot/ETC5_NozzleMods/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install.sh | bash
 ```
 
 Or download and run:
 
 ```bash
-wget https://raw.githubusercontent.com/CowboyPilot/ETC5_NozzleMods/main/install.sh
+wget https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install.sh
 chmod +x install.sh
 ./install.sh
 ```
@@ -321,7 +321,7 @@ nozzle-menu
 
 ### Method 2: Re-run installer
 ```bash
-curl -fsSL https://raw.githubusercontent.com/CowboyPilot/ETC5_NozzleMods/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install.sh | bash
 ```
 
 ### Method 3: Use local installer
@@ -546,7 +546,7 @@ TCP Command Port=8300
 
 Found a bug? Have a suggestion? 
 
-1. Check existing [Issues](https://github.com/CowboyPilot/ETC5_NozzleMods/issues)
+1. Check existing [Issues](https://github.com/CowboyPilot/EmcommTools-NozzleMods/issues)
 2. Open a new issue with details
 3. Pull requests welcome!
 
