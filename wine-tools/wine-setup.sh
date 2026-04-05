@@ -635,6 +635,17 @@ if [[ "${NEW_PREFIX}" -eq 1 ]]; then
 
   DEPS=(winxp sound=alsa dotnet35sp1 vb6run vcrun2015 dotnet40 dotnet46 corefonts tahoma gdiplus msxml6)
 
+  # Pre-fetch VB6 runtime from Microsoft — winetricks mirrors are unreliable
+  VB6_CACHE="${HOME}/.cache/winetricks/vb6run"
+  VB6_FILE="${VB6_CACHE}/VB6.0-KB290887-X86.exe"
+  if [[ ! -f "${VB6_FILE}" ]]; then
+    echo "  -> Pre-fetching VB6 runtime (winetricks mirror workaround)..."
+    mkdir -p "${VB6_CACHE}"
+    curl -L -o "${VB6_FILE}" \
+      "https://download.microsoft.com/download/5/a/d/5ad868a0-8ecd-4bb0-a882-fe53eb7ef348/VB6.0-KB290887-X86.exe" \
+      2>/dev/null || echo "WARNING: VB6 pre-fetch failed. winetricks will attempt its own download."
+  fi
+
   for dep in "${DEPS[@]}"; do
     echo "  -> winetricks ${dep}"
     set +e
