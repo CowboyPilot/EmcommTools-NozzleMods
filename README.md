@@ -1,6 +1,8 @@
-# NozzleMods for EmComm Tools R5
+# NozzleMods for EmComm Tools R6
 
-A comprehensive collection of scripts and tools to enhance EmComm Tools R5 with VARA modem support, AIOC DireWolf integration, radio configuration utilities, and system maintenance tools.
+A comprehensive collection of scripts and tools to enhance EmComm Tools R6 with VARA modem support, AIOC DireWolf integration, radio configuration utilities, and system maintenance tools.
+
+**** NOTE: Updates are underway for R6 support.  Notably the VARA/VARAC/WLE installer is currently only partially functional as well as Chirp installation.  If you come across other issues please report them as a bug.  Thanks! *** 
 
 ## Quick Installation
 
@@ -54,7 +56,7 @@ The installer also copies `nozzle-menu` to `/opt/emcomm-tools/bin/` for system-w
 
 Before using NozzleMods, ensure you have:
 
-1. **EmComm Tools R5** properly installed
+1. **EmComm Tools R6** properly installed
 2. Run `et-user` to configure your callsign
 3. Run `et-audio` to configure audio
 4. Run `et-radio` to select your radio
