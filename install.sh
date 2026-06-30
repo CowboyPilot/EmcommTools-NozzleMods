@@ -274,6 +274,7 @@ show_next_steps() {
   echo "  sudo ${NOZZLE_DIR}/radio-tools/xiegu-g90/update-g90-config.sh"
   echo "  sudo ${NOZZLE_DIR}/radio-tools/yaesu-ft710/install_ft710.sh"
   echo "  ${NOZZLE_DIR}/radio-tools/anytone-578/install_anytone578.sh"
+  echo "  ${NOZZLE_DIR}/radio-tools/mercury/install_mercury.sh"
   echo "  sudo ${NOZZLE_DIR}/radio-tools/aioc/install_aioc.sh"
   echo
   echo -e "${YELLOW}Linux System Tools:${NC}"

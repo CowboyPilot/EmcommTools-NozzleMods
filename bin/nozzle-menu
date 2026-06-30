@@ -398,6 +398,25 @@ install_hamlib_anytone() {
   fi
 }
 
+install_mercury() {
+  clear
+  echo -e "${GREEN}================================================================${NC}"
+  echo -e "${GREEN}           Mercury Modem Installation${NC}"
+  echo -e "${GREEN}================================================================${NC}"
+  echo
+
+  if [[ -f "${NOZZLE_DIR}/radio-tools/mercury/install_mercury.sh" ]]; then
+    cd "${NOZZLE_DIR}/radio-tools/mercury"
+    bash install_mercury.sh
+    echo
+    read -r -p "Press Enter to return to menu..."
+  else
+    echo -e "${RED}ERROR: Mercury installer not found at ${NOZZLE_DIR}/radio-tools/mercury/install_mercury.sh${NC}"
+    echo
+    read -r -p "Press Enter to return to menu..."
+  fi
+}
+
 install_aioc() {
   clear
   echo -e "${GREEN}================================================================${NC}"
@@ -539,7 +558,8 @@ show_radio_menu() {
     echo "  2) Install Yaesu FT-710 Support"
     echo "  3) Install Anytone 578 Support"
     echo "  4) Install Custom Hamlib (Anytone 578 driver)"
-    echo "  5) Install AIOC Support"
+    echo "  5) Install Mercury Modem"
+    echo "  6) Install AIOC Support"
     echo ""
     echo "  B) Back to Main Menu"
     echo ""
@@ -562,6 +582,9 @@ show_radio_menu() {
         install_hamlib_anytone
         ;;
       5)
+        install_mercury
+        ;;
+      6)
         install_aioc
         ;;
       B)

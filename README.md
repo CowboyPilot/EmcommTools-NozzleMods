@@ -39,6 +39,8 @@ NozzleMods/
 │   │   ├── anytone-578.json           # Radio configuration
 │   │   ├── anytone-578.sh             # Audio script
 │   │   └── udev-tester.patch          # System patches
+│   ├── mercury/
+│   │   └── install_mercury.sh         # Build/install Mercury modem
 │   └── aioc/
 │       ├── install_aioc.sh            # Install AIOC support
 │       ├── aioc.json                  # AIOC radio configuration
@@ -120,7 +122,8 @@ Perfect for digital modes, APRS, and packet radio with any K1-style connector ra
 2. **Yaesu FT-710 Support** - Full installation with udev rules
 3. **Anytone 578 Support** - Install with Digirig Mobile integration
 4. **Custom Hamlib (Anytone 578)** - Build and install Hamlib fork with AT-D578UVIII driver
-5. **AIOC Support** - Install AIOC with DireWolf configurations
+5. **Mercury Modem** - Build and install Mercury HF modem
+6. **AIOC Support** - Install AIOC with DireWolf configurations
 
 ---
 
@@ -319,6 +322,32 @@ rigctl -l | grep -i anytone
 ```bash
 ~/.hamlib-backup/
 ```
+
+---
+
+#### Mercury Modem
+
+Mercury is an HF modem for digital voice and data. This option builds it from source with internal Hamlib disabled so it works alongside the custom Hamlib build.
+
+```bash
+cd ~/NozzleMods/radio-tools/mercury
+./install_mercury.sh
+```
+
+**What it does:**
+* Installs build dependencies if needed
+* Clones Mercury from GitHub
+* Disables internal Hamlib (`HAVE_HAMLIB=0`) to avoid conflicts
+* Builds and installs system-wide
+
+**Usage with rig control:**
+Since internal Hamlib is disabled, run rigctld separately:
+```bash
+rigctld -m 37001 -s 115200 -r /dev/et-cat &
+mercury
+```
+
+**Rerun to update:** The build directory is kept at `~/mercury-build`. Rerunning the script pulls the latest source and rebuilds.
 
 ---
 
