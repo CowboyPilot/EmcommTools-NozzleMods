@@ -410,6 +410,7 @@ launch_aioc_mode() {
   check_aioc || return 1
 
   set_aioc_audio_levels
+  et-audio update-config 2>/dev/null || true
 
   echo -e "${BLUE}Starting AIOC DireWolf in ${mode_name} mode...${NC}"
   echo
@@ -426,6 +427,7 @@ launch_aioc_mode() {
 
 start_aioc_direwolf_background() {
   set_aioc_audio_levels
+  et-audio update-config 2>/dev/null || true
 
   echo -e "${BLUE}Starting AIOC DireWolf (1200 baud)...${NC}"
   systemd-cat -t aioc-direwolf aioc-direwolf start aioc-simple &
@@ -1002,6 +1004,7 @@ main() {
       1)
         # Pat + VARA HF
         global_cleanup
+        et-audio update-config 2>/dev/null || true
 
         echo
         echo -e "${BLUE}Selected: Pat + VARA HF${NC}"
@@ -1033,6 +1036,7 @@ main() {
       2)
         # Pat + VARA FM
         global_cleanup
+        et-audio update-config 2>/dev/null || true
 
         echo
         echo -e "${BLUE}Selected: Pat + VARA FM${NC}"
@@ -1064,6 +1068,7 @@ main() {
       3)
         # VARA HF Modem Only
         global_cleanup
+        et-audio update-config 2>/dev/null || true
 
         echo
         echo -e "${BLUE}Selected: VARA HF Modem Only${NC}"
@@ -1095,6 +1100,7 @@ main() {
       4)
         # VARA FM Modem Only
         global_cleanup
+        et-audio update-config 2>/dev/null || true
 
         echo
         echo -e "${BLUE}Selected: VARA FM Modem Only${NC}"
@@ -1126,6 +1132,7 @@ main() {
       5)
         # Mercury Standalone
         global_cleanup
+        et-audio update-config 2>/dev/null || true
 
         echo
         echo -e "${BLUE}Selected: Mercury Standalone${NC}"
@@ -1157,6 +1164,7 @@ main() {
       6)
         # Pat + Mercury
         global_cleanup
+        et-audio update-config 2>/dev/null || true
 
         echo
         echo -e "${BLUE}Selected: Pat + Mercury${NC}"
