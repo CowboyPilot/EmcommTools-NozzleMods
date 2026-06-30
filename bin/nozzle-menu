@@ -1046,15 +1046,15 @@ show_menu() {
   echo "  I) Install Options"
   echo "  R) Radio Options"
   echo "  S) System Tools"
-  if [[ "${SHOW_UPDATE}" == true ]]; then
-    echo "  U) Update NozzleMods"
-  fi
   echo ""
   echo -e "${YELLOW}════════════════════════════════════════════════════════════${NC}"
   echo ""
   echo "  Q) Quit"
   echo ""
   echo -e "${VERSION_COLOR}  NozzleMods v${NOZZLE_VERSION}${NC}"
+  if [[ "${SHOW_UPDATE}" == true ]]; then
+    echo -e "${VERSION_COLOR}  U) Update NozzleMods${NC}"
+  fi
   echo ""
   echo -n "Enter choice: "
 }
