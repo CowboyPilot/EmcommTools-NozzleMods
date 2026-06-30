@@ -1,0 +1,14 @@
+--- udev-tester.sh.orig
++++ udev-tester.sh
+@@ -107,6 +107,11 @@
+       exit 0
+     fi
+
++    if [[ "$ID" == "anytone-578" ]]; then
++      et-log "Old DigiRig Mobile detected for Anytone 578"
++      exit 0
++    fi
++
+   fi
+
+   exit 1

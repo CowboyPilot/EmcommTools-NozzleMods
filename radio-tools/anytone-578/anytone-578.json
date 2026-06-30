@@ -1,0 +1,22 @@
+{
+  "id": "anytone-578",
+  "vendor": "Anytone",
+  "model": "578 w/ CAT (Digirig Mob)",
+  "rigctrl": {
+    "id": "37001",
+    "baud": "115200",
+    "ptt": "RIG",
+    "pttOnly": "false"
+  },
+  "audio": {
+    "script": "/opt/emcomm-tools/conf/radios.d/audio/anytone-578.sh"
+  },
+  "notes": [
+    "1. Set VFO A Active in VFO Mode",
+    "2. Best results Settings - (1) Radio Set - (4) Other Func - (6) Ana Sq Level to 0",
+    "",
+    "Do not enable VOX on radio, do not enable mic volt det (Leave as UART)"
+  ],
+  "fieldNotes": [
+  ]
+}

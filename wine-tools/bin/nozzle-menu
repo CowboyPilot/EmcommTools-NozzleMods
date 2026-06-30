@@ -2,14 +2,13 @@
 ################################################################################
 # nozzle-menu
 #
-# Main menu for NozzleMods - EmComm Tools R5 enhancements V1.2
+# Main menu for NozzleMods - EmComm Tools R6 enhancements V2.0
 #
 # Features:
-#   - VARA Tools launcher (Winlink, VarAC, Pat with VARA HF/FM)
+#   - VARA Tools launcher (Pat with VARA HF/FM, standalone VARA modems)
 #   - AIOC DireWolf modes (Simple TNC, Packet, APRS)
 #   - Radio configuration (Xiegu G90, Yaesu FT-710, AIOC)
 #   - System fixes and maintenance
-#   - VARA installation wizard
 #
 ################################################################################
 
@@ -22,16 +21,12 @@ ET_BIN="${ET_HOME}/bin"
 WINEPREFIX="${HOME}/.wine32"
 
 # Wine executables
-WINLINK_EXE="${WINEPREFIX}/drive_c/RMS Express/RMS Express.exe"
-VARAC_EXE="${WINEPREFIX}/drive_c/VarAC/VarAC.exe"
 VARA_HF_EXE="${WINEPREFIX}/drive_c/VARA/VARA.exe"
 VARA_FM_EXE="${WINEPREFIX}/drive_c/VARA FM/VARAFM.exe"
 
 # INI files
 VARA_HF_INI="${WINEPREFIX}/drive_c/VARA/VARA.ini"
 VARA_FM_INI="${WINEPREFIX}/drive_c/VARA FM/VARAFM.ini"
-WINLINK_INI="${WINEPREFIX}/drive_c/RMS Express/RMS Express.ini"
-VARAC_INI="${WINEPREFIX}/drive_c/VarAC/VarAC.ini"
 
 # Colors
 RED='\033[1;31m'
@@ -60,7 +55,6 @@ fi
 find_free_port() {
   local port
   for port in $(seq 8300 8350); do
-    # Check if port has ANY TCP state (LISTEN, ESTABLISHED, TIME_WAIT, etc)
     if ! ss -tan 2>/dev/null | grep -q ":${port} "; then
       echo "${port}"
       return 0
@@ -87,8 +81,6 @@ global_cleanup() {
   # Kill any leftover VARA processes
   pkill -u "$USER" -f "VARA.exe" 2>/dev/null || true
   pkill -u "$USER" -f "VARAFM.exe" 2>/dev/null || true
-  pkill -u "$USER" -f "VarAC.exe" 2>/dev/null || true
-  pkill -u "$USER" -f "RMS Express.exe" 2>/dev/null || true
   pkill -f "pat http" 2>/dev/null || true
 
   sleep 2
@@ -115,28 +107,14 @@ get_et_vars() {
   local GRID=""
   local WINLINK_PASSWD=""
   local ET_USER_CONFIG="${HOME}/.config/emcomm-tools/user.json"
-  
+
   if [ -f "${ET_USER_CONFIG}" ]; then
     CALLSIGN=$(jq -r .callsign "${ET_USER_CONFIG}" 2>/dev/null || echo "")
     GRID=$(jq -r .grid "${ET_USER_CONFIG}" 2>/dev/null || echo "")
     WINLINK_PASSWD=$(jq -r .winlinkPasswd "${ET_USER_CONFIG}" 2>/dev/null || echo "")
   fi
-  
-  echo "${CALLSIGN}|${GRID}|${WINLINK_PASSWD}"
-}
 
-# Get radio configuration from active-radio.json
-get_radio_config() {
-  local BAUD_RATE="38400"  # Default
-  local RADIO_MODEL=""
-  local ET_RADIO_CONFIG="${HOME}/.config/emcomm-tools/active-radio.json"
-  
-  if [ -f "${ET_RADIO_CONFIG}" ]; then
-    BAUD_RATE=$(jq -r '.baudRate // "38400"' "${ET_RADIO_CONFIG}" 2>/dev/null || echo "38400")
-    RADIO_MODEL=$(jq -r '.model // ""' "${ET_RADIO_CONFIG}" 2>/dev/null || echo "")
-  fi
-  
-  echo "${BAUD_RATE}|${RADIO_MODEL}"
+  echo "${CALLSIGN}|${GRID}|${WINLINK_PASSWD}"
 }
 
 # Configure Pat for VARA HF or FM
@@ -146,22 +124,22 @@ configure_pat() {
   local data_port=$((port + 1))
   local ET_CONF_TEMPLATE_DIR="${ET_HOME}/conf/template.d/winlink"
   local PAT_CONFIG="${HOME}/.config/pat/config.json"
-  
+
   echo -e "${BLUE}  → Configuring Pat for VARA ${mode}${NC}"
-  
+
   # Get ET variables
   local et_vars=$(get_et_vars)
   local CALLSIGN=$(echo "$et_vars" | cut -d'|' -f1)
   local GRID=$(echo "$et_vars" | cut -d'|' -f2)
   local WINLINK_PASSWD=$(echo "$et_vars" | cut -d'|' -f3)
-  
+
   # Check for valid callsign
   if [ -z "$CALLSIGN" ] || [ "$CALLSIGN" = "N0CALL" ] || [ "$CALLSIGN" = "null" ]; then
     echo -e "${RED}  ! ERROR: No valid callsign set${NC}"
     echo -e "${YELLOW}    Run 'et-user' to set your callsign${NC}"
     return 1
   fi
-  
+
   # Determine template file
   local template_file
   if [[ "${mode}" == "HF" ]]; then
@@ -169,25 +147,25 @@ configure_pat() {
   else
     template_file="${ET_CONF_TEMPLATE_DIR}/config.vara-fm.json"
   fi
-  
+
   # Check if template exists
   if [[ ! -f "${template_file}" ]]; then
     echo -e "${RED}  ! ERROR: Pat template not found: ${template_file}${NC}"
     return 1
   fi
-  
+
   # Create Pat config directory
   mkdir -p "$(dirname "${PAT_CONFIG}")"
-  
+
   # Copy template
   echo -e "${BLUE}  → Copying template: ${template_file}${NC}"
   cp "${template_file}" "${PAT_CONFIG}"
-  
+
   # Substitute ET variables using sed (matching et-winlink pattern)
   sed -i "s|{{ET_CALLSIGN}}|${CALLSIGN}|g" "${PAT_CONFIG}"
   sed -i "s|{{ET_WINLINK_PASSWD}}|${WINLINK_PASSWD}|g" "${PAT_CONFIG}"
   sed -i "s|{{ET_GRID}}|${GRID}|g" "${PAT_CONFIG}"
-  
+
   # Update VARA ports using jq
   if command -v jq &>/dev/null; then
     if [[ "${mode}" == "HF" ]]; then
@@ -208,21 +186,21 @@ start_pat() {
     echo -e "${YELLOW}Please install Pat Winlink first${NC}"
     return 1
   fi
-  
+
   echo -e "${GREEN}>>> Starting Pat HTTP server...${NC}"
-  
+
   # Kill any existing pat http processes
   pkill -f "pat http" 2>/dev/null || true
   sleep 1
-  
+
   # Start pat http in background
   pat http &>/dev/null &
   sleep 3
-  
+
   # Open browser
   local pat_url="http://localhost:8080"
   echo -e "${GREEN}>>> Opening browser to ${pat_url}${NC}"
-  
+
   if command -v xdg-open &>/dev/null; then
     xdg-open "${pat_url}" &>/dev/null &
   elif command -v firefox &>/dev/null; then
@@ -265,12 +243,11 @@ patch_vara_ini_port() {
 
   echo -e "${BLUE}  → Updating ${ini}${NC}"
   echo -e "${BLUE}     Setting TCP Command Port=${port}${NC}"
-  
+
   cp "${ini}" "${ini}.backup" 2>/dev/null || true
 
-  # Simple sed replacement - most reliable for VARA INI files
   sed -i "s/^TCP Command Port=.*/TCP Command Port=${port}/" "${ini}"
-  
+
   # Verify the change
   local new_port=$(grep "^TCP Command Port=" "${ini}" | cut -d= -f2)
   if [[ "${new_port}" == "${port}" ]]; then
@@ -281,223 +258,9 @@ patch_vara_ini_port() {
   fi
 }
 
-# Patch Winlink Express INI with new port
-patch_winlink_ini() {
-  local mode="$1"  # HF or FM
-  local port="$2"
-
-  if [[ ! -f "${WINLINK_INI}" ]]; then
-    echo -e "${YELLOW}  ! Winlink Express INI not found: ${WINLINK_INI}${NC}"
-    echo -e "${YELLOW}    Winlink Express needs to be run at least once to generate its configuration${NC}"
-    echo -e "${YELLOW}    After first run, close Winlink and run this launcher again to update the port${NC}"
-    return 0
-  fi
-
-  if [[ "${mode}" == "HF" ]]; then
-    echo -e "${BLUE}  → Updating Winlink Express INI for VARA HF${NC}"
-    echo -e "${BLUE}     Setting TCP Port=${port} in [Vara TNC] section${NC}"
-    echo -e "${BLUE}     Disabling Auto Launch Vara${NC}"
-  else
-    echo -e "${BLUE}  → Updating Winlink Express INI for VARA FM${NC}"
-    echo -e "${BLUE}     Setting TCP Port=${port} in [Vara FM TNC] section${NC}"
-    echo -e "${BLUE}     Disabling Auto Launch Vara FM${NC}"
-  fi
-  
-  cp "${WINLINK_INI}" "${WINLINK_INI}.backup" 2>/dev/null || true
-
-  # Update the appropriate section based on mode
-  if [[ "${mode}" == "HF" ]]; then
-    # Update [Vara TNC] section for HF
-    awk -v port="${port}" '
-      /^\[Vara TNC\]/ { in_section=1 }
-      /^\[.*\]/ && !/^\[Vara TNC\]/ { in_section=0 }
-      in_section && /^TCP Port=/ { print "TCP Port=" port; next }
-      in_section && /^Auto Launch Vara=/ { print "Auto Launch Vara=False"; next }
-      { print }
-    ' "${WINLINK_INI}" > "${WINLINK_INI}.tmp" && mv "${WINLINK_INI}.tmp" "${WINLINK_INI}"
-    
-    # Verify the change
-    local new_port=$(awk '/^\[Vara TNC\]/,/^\[.*\]/ { if (/^TCP Port=/) print $0 }' "${WINLINK_INI}" | cut -d= -f2)
-    local auto_launch=$(awk '/^\[Vara TNC\]/,/^\[.*\]/ { if (/^Auto Launch Vara=/) print $0 }' "${WINLINK_INI}" | cut -d= -f2)
-    
-    if [[ "${new_port}" == "${port}" ]]; then
-      echo -e "${GREEN}  ✓ Successfully set VARA HF TCP Port=${port}${NC}"
-    else
-      echo -e "${RED}  ! WARNING: Port may not have been set correctly${NC}"
-      echo -e "${YELLOW}    Expected: ${port}, Found: ${new_port}${NC}"
-    fi
-    
-    if [[ "${auto_launch}" == "False" ]]; then
-      echo -e "${GREEN}  ✓ Auto Launch Vara disabled${NC}"
-    else
-      echo -e "${YELLOW}  ! Auto Launch Vara may not be disabled: ${auto_launch}${NC}"
-    fi
-  else
-    # Update [Vara FM TNC] section for FM
-    awk -v port="${port}" '
-      /^\[Vara FM TNC\]/ { in_section=1 }
-      /^\[.*\]/ && !/^\[Vara FM TNC\]/ { in_section=0 }
-      in_section && /^TCP Port=/ { print "TCP Port=" port; next }
-      in_section && /^Auto Launch Vara FM=/ { print "Auto Launch Vara FM=False"; next }
-      { print }
-    ' "${WINLINK_INI}" > "${WINLINK_INI}.tmp" && mv "${WINLINK_INI}.tmp" "${WINLINK_INI}"
-    
-    # Verify the change
-    local new_port=$(awk '/^\[Vara FM TNC\]/,/^\[.*\]/ { if (/^TCP Port=/) print $0 }' "${WINLINK_INI}" | cut -d= -f2)
-    local auto_launch=$(awk '/^\[Vara FM TNC\]/,/^\[.*\]/ { if (/^Auto Launch Vara FM=/) print $0 }' "${WINLINK_INI}" | cut -d= -f2)
-    
-    if [[ "${new_port}" == "${port}" ]]; then
-      echo -e "${GREEN}  ✓ Successfully set VARA FM TCP Port=${port}${NC}"
-    else
-      echo -e "${RED}  ! WARNING: Port may not have been set correctly${NC}"
-      echo -e "${YELLOW}    Expected: ${port}, Found: ${new_port}${NC}"
-    fi
-    
-    if [[ "${auto_launch}" == "False" ]]; then
-      echo -e "${GREEN}  ✓ Auto Launch Vara FM disabled${NC}"
-    else
-      echo -e "${YELLOW}  ! Auto Launch Vara FM may not be disabled: ${auto_launch}${NC}"
-    fi
-  fi
-}
-
-# Patch VarAC INI for HF or FM
-patch_varac_ini() {
-  local mode="$1"  # HF or FM
-  local port="$2"
-
-  [[ -f "${VARAC_INI}" ]] || return 0
-
-  echo -e "${BLUE}  → Updating VarAC INI for VARA ${mode} (port ${port})${NC}"
-  cp "${VARAC_INI}" "${VARAC_INI}.backup" 2>/dev/null || true
-
-  # Get radio configuration
-  local radio_config=$(get_radio_config)
-  local baud_rate=$(echo "$radio_config" | cut -d'|' -f1)
-  local radio_model=$(echo "$radio_config" | cut -d'|' -f2)
-  
-  echo -e "${BLUE}     Setting COM port: COM10, Baud rate: ${baud_rate}${NC}"
-  if [[ -n "${radio_model}" ]]; then
-    echo -e "${BLUE}     Radio model: ${radio_model}${NC}"
-  fi
-
-  if [[ "${mode}" == "HF" ]]; then
-    # Set VarAC to use VARA HF mode
-    VARAC_INI="${VARAC_INI}" port="${port}" baud_rate="${baud_rate}" python3 - <<'PYTHON_EOF'
-import configparser
-import sys
-import os
-
-config = configparser.ConfigParser()
-config.read(os.environ['VARAC_INI'])
-
-# Main settings - set modem type to HF
-if 'Settings' not in config:
-    config['Settings'] = {}
-config['Settings']['ModemMode'] = 'VARAHF'
-config['Settings']['VaraModemType'] = 'VaraHF'
-
-# VARAHF_CONFIG section
-if 'VARAHF_CONFIG' not in config:
-    config['VARAHF_CONFIG'] = {}
-config['VARAHF_CONFIG']['VaraModemType'] = 'VaraHF'
-config['VARAHF_CONFIG']['VarahfMainPort'] = os.environ['port']
-config['VARAHF_CONFIG']['VarahfLaunchOnModemConnect'] = 'OFF'
-config['VARAHF_CONFIG']['StartModemUponStartup'] = 'OFF'
-config['VARAHF_CONFIG']['AutoStartModem'] = 'OFF'
-
-# RIG_COM_CONFIGS section - set COM port and baud rate
-if 'RIG_COM_CONFIGS' not in config:
-    config['RIG_COM_CONFIGS'] = {}
-config['RIG_COM_CONFIGS']['ComPort'] = 'COM10'
-config['RIG_COM_CONFIGS']['BaudRate'] = os.environ['baud_rate']
-
-# Global auto-launch disable
-if 'Modem' not in config:
-    config['Modem'] = {}
-config['Modem']['StartModemUponStartup'] = 'OFF'
-config['Modem']['AutoLaunch'] = 'OFF'
-
-with open(os.environ['VARAC_INI'], 'w') as f:
-    config.write(f, space_around_delimiters=False)
-PYTHON_EOF
-  else
-    # Set VarAC to use VARA FM mode
-    VARAC_INI="${VARAC_INI}" port="${port}" baud_rate="${baud_rate}" python3 - <<'PYTHON_EOF'
-import configparser
-import sys
-import os
-
-config = configparser.ConfigParser()
-config.read(os.environ['VARAC_INI'])
-
-# Main settings - set modem type to FM
-if 'Settings' not in config:
-    config['Settings'] = {}
-config['Settings']['ModemMode'] = 'VARAFM'
-config['Settings']['VaraModemType'] = 'VaraFM'
-
-# VARAFM_CONFIG section
-if 'VARAFM_CONFIG' not in config:
-    config['VARAFM_CONFIG'] = {}
-config['VARAFM_CONFIG']['VaraModemType'] = 'VaraFM'
-config['VARAFM_CONFIG']['VarafmMainPort'] = os.environ['port']
-config['VARAFM_CONFIG']['VarafmLaunchOnModemConnect'] = 'OFF'
-config['VARAFM_CONFIG']['StartModemUponStartup'] = 'OFF'
-config['VARAFM_CONFIG']['AutoStartModem'] = 'OFF'
-
-# RIG_COM_CONFIGS section - set COM port and baud rate
-if 'RIG_COM_CONFIGS' not in config:
-    config['RIG_COM_CONFIGS'] = {}
-config['RIG_COM_CONFIGS']['ComPort'] = 'COM10'
-config['RIG_COM_CONFIGS']['BaudRate'] = os.environ['baud_rate']
-
-# Global auto-launch disable
-if 'Modem' not in config:
-    config['Modem'] = {}
-config['Modem']['StartModemUponStartup'] = 'OFF'
-config['Modem']['AutoLaunch'] = 'OFF'
-
-with open(os.environ['VARAC_INI'], 'w') as f:
-    config.write(f, space_around_delimiters=False)
-PYTHON_EOF
-  fi
-  
-  echo -e "${GREEN}  ✓ VarAC configured (COM10, ${baud_rate} baud, auto-launch disabled)${NC}"
-}
-
 ################################################################################
 # Launch Functions
 ################################################################################
-
-start_winlink() {
-  if [[ ! -e "${WINLINK_EXE}" ]]; then
-    echo -e "${RED}ERROR: Winlink not found at: ${WINLINK_EXE}${NC}"
-    return 1
-  fi
-
-  echo -e "${GREEN}>>> Starting Winlink Express...${NC}"
-  WINEPREFIX="${WINEPREFIX}" "${WINE_BIN}" "${WINLINK_EXE}" >/dev/null 2>&1 &
-  sleep 2
-}
-
-start_varac() {
-  if [[ ! -e "${VARAC_EXE}" ]]; then
-    echo -e "${RED}ERROR: VarAC not found at: ${VARAC_EXE}${NC}"
-    return 1
-  fi
-
-  echo -e "${GREEN}>>> Starting VarAC...${NC}"
-  local dir base
-  dir="$(dirname "${VARAC_EXE}")"
-  base="$(basename "${VARAC_EXE}")"
-
-  (
-    cd "${dir}" || exit 1
-    WINEPREFIX="${WINEPREFIX}" "${WINE_BIN}" "${base}" >/dev/null 2>&1 &
-  )
-  sleep 2
-}
 
 start_vara_hf() {
   if [[ ! -e "${VARA_HF_EXE}" ]]; then
@@ -528,14 +291,13 @@ start_vara_fm() {
 launch_aioc_mode() {
   local mode="$1"
   local mode_name="$2"
-  
+
   clear
   echo -e "${GREEN}================================================================${NC}"
   echo -e "${GREEN}           AIOC DireWolf - ${mode_name}${NC}"
   echo -e "${GREEN}================================================================${NC}"
   echo
-  
-  # Check if aioc-direwolf command exists
+
   if ! command -v aioc-direwolf &>/dev/null; then
     echo -e "${RED}ERROR: aioc-direwolf command not found${NC}"
     echo -e "${YELLOW}Please install AIOC support first from Radio Configuration menu${NC}"
@@ -543,65 +305,18 @@ launch_aioc_mode() {
     read -r -p "Press Enter to return to menu..."
     return 1
   fi
-  
+
   echo -e "${BLUE}Starting AIOC DireWolf in ${mode_name} mode...${NC}"
   echo
-  
-  # Launch aioc-direwolf
+
   aioc-direwolf start "${mode}"
-  
+
   echo
   echo -e "${GREEN}================================================================${NC}"
   echo -e "${GREEN}  AIOC DireWolf ${mode_name} Started${NC}"
   echo -e "${GREEN}================================================================${NC}"
   echo
   read -r -p "Press Enter to return to menu..."
-}
-
-################################################################################
-# VARA Installation Check & Launcher
-################################################################################
-
-check_vara_installed() {
-  if [[ -d "${WINEPREFIX}" ]]; then
-    return 0
-  else
-    return 1
-  fi
-}
-
-launch_vara_installer() {
-  clear
-  echo -e "${GREEN}================================================================${NC}"
-  echo -e "${GREEN}           VARA Tools Installation Wizard${NC}"
-  echo -e "${GREEN}================================================================${NC}"
-  echo
-  echo "VARA tools are not installed yet."
-  echo
-  echo "This will:"
-  echo "  • Install Wine (32-bit prefix)"
-  echo "  • Install Winlink Express"
-  echo "  • Install VarAC (if installer is available)"
-  echo "  • Install VARA HF"
-  echo "  • Install VARA FM"
-  echo
-  read -r -p "Continue with VARA Tools installation? (y/N): " install_choice
-  
-  if [[ "${install_choice}" =~ ^[Yy]$ ]]; then
-    if [[ -f "${NOZZLE_DIR}/wine-tools/wine-setup.sh" ]]; then
-      echo
-      echo "Launching VARA Tools installer..."
-      sleep 2
-      "${NOZZLE_DIR}/wine-tools/wine-setup.sh"
-    else
-      echo -e "${RED}ERROR: Installer not found at ${NOZZLE_DIR}/wine-tools/wine-setup.sh${NC}"
-      echo
-      echo "Please run the NozzleMods installer first:"
-      echo "  curl -fsSL https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install.sh | bash"
-      echo
-      read -r -p "Press Enter to return to menu..."
-    fi
-  fi
 }
 
 ################################################################################
@@ -614,7 +329,7 @@ configure_xiegu_g90() {
   echo -e "${GREEN}           Xiegu G90 DigiRig Configuration${NC}"
   echo -e "${GREEN}================================================================${NC}"
   echo
-  
+
   if [[ -f "${NOZZLE_DIR}/radio-tools/xiegu-g90/update-g90-config.sh" ]]; then
     sudo "${NOZZLE_DIR}/radio-tools/xiegu-g90/update-g90-config.sh"
     echo
@@ -632,7 +347,7 @@ install_yaesu_ft710() {
   echo -e "${GREEN}           Yaesu FT-710 Installation${NC}"
   echo -e "${GREEN}================================================================${NC}"
   echo
-  
+
   if [[ -d "${NOZZLE_DIR}/radio-tools/yaesu-ft710" ]]; then
     cd "${NOZZLE_DIR}/radio-tools/yaesu-ft710"
     bash install_ft710.sh
@@ -645,13 +360,32 @@ install_yaesu_ft710() {
   fi
 }
 
+install_anytone578() {
+  clear
+  echo -e "${GREEN}================================================================${NC}"
+  echo -e "${GREEN}           Anytone 578 Installation${NC}"
+  echo -e "${GREEN}================================================================${NC}"
+  echo
+
+  if [[ -d "${NOZZLE_DIR}/radio-tools/anytone-578" ]]; then
+    cd "${NOZZLE_DIR}/radio-tools/anytone-578"
+    bash install_anytone578.sh
+    echo
+    read -r -p "Press Enter to return to menu..."
+  else
+    echo -e "${RED}ERROR: Anytone 578 tools not found at ${NOZZLE_DIR}/radio-tools/anytone-578/${NC}"
+    echo
+    read -r -p "Press Enter to return to menu..."
+  fi
+}
+
 install_aioc() {
   clear
   echo -e "${GREEN}================================================================${NC}"
   echo -e "${GREEN}           AIOC Installation${NC}"
   echo -e "${GREEN}================================================================${NC}"
   echo
-  
+
   if [[ -d "${NOZZLE_DIR}/radio-tools/aioc" ]]; then
     cd "${NOZZLE_DIR}/radio-tools/aioc"
     bash install_aioc.sh
@@ -659,25 +393,6 @@ install_aioc() {
     read -r -p "Press Enter to return to menu..."
   else
     echo -e "${RED}ERROR: AIOC tools not found at ${NOZZLE_DIR}/radio-tools/aioc/${NC}"
-    echo
-    read -r -p "Press Enter to return to menu..."
-  fi
-}
-
-install_chirp() {
-  clear
-  echo -e "${GREEN}================================================================${NC}"
-  echo -e "${GREEN}           Chirp Installation${NC}"
-  echo -e "${GREEN}================================================================${NC}"
-  echo
-  
-  if [[ -d "${NOZZLE_DIR}/linux-tools/" ]]; then
-    cd "${NOZZLE_DIR}/linux-tools"
-    sudo bash install_chirp.sh
-    echo
-    read -r -p "Press Enter to return to menu..."
-  else
-    echo -e "${RED}ERROR: Chirp Installer not found at ${NOZZLE_DIR}/linux-tools/${NC}"
     echo
     read -r -p "Press Enter to return to menu..."
   fi
@@ -693,31 +408,13 @@ fix_apt_sources() {
   echo -e "${GREEN}           Fix APT Sources${NC}"
   echo -e "${GREEN}================================================================${NC}"
   echo
-  
+
   if [[ -f "${NOZZLE_DIR}/linux-tools/fix-sources.sh" ]]; then
     sudo "${NOZZLE_DIR}/linux-tools/fix-sources.sh"
     echo
     read -r -p "Press Enter to return to menu..."
   else
     echo -e "${RED}ERROR: Script not found at ${NOZZLE_DIR}/linux-tools/fix-sources.sh${NC}"
-    echo
-    read -r -p "Press Enter to return to menu..."
-  fi
-}
-
-fix_varac_v13() {
-  clear
-  echo -e "${GREEN}================================================================${NC}"
-  echo -e "${GREEN}           Fix VarAC V13 .NET Issues${NC}"
-  echo -e "${GREEN}================================================================${NC}"
-  echo
-  
-  if [[ -f "${NOZZLE_DIR}/wine-tools/fix-varac-13.sh" ]]; then
-    "${NOZZLE_DIR}/wine-tools/fix-varac-13.sh"
-    echo
-    read -r -p "Press Enter to return to menu..."
-  else
-    echo -e "${RED}ERROR: Script not found at ${NOZZLE_DIR}/wine-tools/fix-varac-13.sh${NC}"
     echo
     read -r -p "Press Enter to return to menu..."
   fi
@@ -737,13 +434,13 @@ update_nozzle_tools() {
   echo "All tools will be updated to the latest versions."
   echo
   read -r -p "Continue with update? (y/N): " update_choice
-  
+
   if [[ "${update_choice}" =~ ^[Yy]$ ]]; then
     echo
     echo "Downloading latest installer..."
-    
+
     local temp_installer="/tmp/nozzle-install-update.sh"
-    
+
     if curl -fsSL "https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install.sh" -o "${temp_installer}"; then
       chmod +x "${temp_installer}"
       echo
@@ -787,10 +484,10 @@ show_aioc_menu() {
     echo "  B) Back to Main Menu"
     echo ""
     echo -n "Enter choice: "
-    
+
     read -r CHOICE
     CHOICE=$(echo "$CHOICE" | tr '[:lower:]' '[:upper:]')
-    
+
     case "${CHOICE}" in
       1)
         launch_aioc_mode "aioc-simple" "Simple TNC"
@@ -821,15 +518,16 @@ show_radio_menu() {
     echo ""
     echo "  1) Configure Xiegu G90 DigiRig PTT"
     echo "  2) Install Yaesu FT-710 Support"
-    echo "  3) Install AIOC Support"
+    echo "  3) Install Anytone 578 Support"
+    echo "  4) Install AIOC Support"
     echo ""
     echo "  B) Back to Main Menu"
     echo ""
     echo -n "Enter choice: "
-    
+
     read -r CHOICE
     CHOICE=$(echo "$CHOICE" | tr '[:lower:]' '[:upper:]')
-    
+
     case "${CHOICE}" in
       1)
         configure_xiegu_g90
@@ -838,6 +536,9 @@ show_radio_menu() {
         install_yaesu_ft710
         ;;
       3)
+        install_anytone578
+        ;;
+      4)
         install_aioc
         ;;
       B)
@@ -859,28 +560,20 @@ show_system_menu() {
     echo -e "${GREEN}================================================================${NC}"
     echo ""
     echo "  1) Fix APT Repository Sources"
-    echo "  2) Fix VarAC V13 .NET Issues"
-    echo "  3) Install Chirp"
-    echo "  4) Update NozzleMods Tools"
+    echo "  2) Update NozzleMods Tools"
     echo ""
     echo "  B) Back to Main Menu"
     echo ""
     echo -n "Enter choice: "
-    
+
     read -r CHOICE
     CHOICE=$(echo "$CHOICE" | tr '[:lower:]' '[:upper:]')
-    
+
     case "${CHOICE}" in
       1)
         fix_apt_sources
         ;;
       2)
-        fix_varac_v13
-        ;;
-      3)
-        install_chirp
-        ;;
-      4)
         update_nozzle_tools
         ;;
       B)
@@ -897,52 +590,27 @@ show_system_menu() {
 show_menu() {
   clear
   echo -e "${GREEN}================================================================${NC}"
-  echo -e "${GREEN}           NozzleMods Menu - EmComm Tools R5${NC}"
+  echo -e "${GREEN}           NozzleMods Menu - EmComm Tools R6${NC}"
   echo -e "${GREEN}================================================================${NC}"
   echo ""
-  
-  # Check if VARA is installed
-  if ! check_vara_installed; then
-    echo -e "${YELLOW}⚠ VARA Tools not installed${NC}"
-    echo ""
-    echo -e "  ${BLUE}1)${NC} Install VARA Tools (Winlink, VarAC, VARA HF/FM)"
-    echo ""
-    echo -e "${YELLOW}═══════════════════════════════════════════════════════════${NC}"
-    echo ""
-    echo "  A) AIOC Options"
-    echo "  R) Radio Configuration"
-    echo "  S) System Tools"
-    echo ""
-    echo -e "${YELLOW}════════════════════════════════════════════════════════════${NC}"
-    echo ""
-    echo "  Q) Quit"
-    echo ""
-    echo -n "Enter choice: "
-  else
-    echo "VARA Applications:"
-    echo ""
-    echo "  1) VarAC + VARA HF"
-    echo "  2) VarAC + VARA FM"
-    echo "  3) Winlink + VARA HF"
-    echo "  4) Winlink + VARA FM"
-    echo "  5) Winlink Other (ARDOP/Telnet - no VARA)"
-    echo "  6) Pat + VARA HF"
-    echo "  7) Pat + VARA FM"
-    echo "  8) VARA HF Modem Only"
-    echo "  9) VARA FM Modem Only"
-    echo ""
-    echo -e "${YELLOW}════════════════════════════════════════════════════════════${NC}"
-    echo ""
-    echo "  A) AIOC Options"
-    echo "  R) Radio Configuration"
-    echo "  S) System Tools"
-    echo ""
-    echo -e "${YELLOW}════════════════════════════════════════════════════════════${NC}"
-    echo ""
-    echo "  Q) Quit"
-    echo ""
-    echo -n "Enter choice: "
-  fi
+  echo "VARA Applications:"
+  echo ""
+  echo "  1) Pat + VARA HF"
+  echo "  2) Pat + VARA FM"
+  echo "  3) VARA HF Modem Only"
+  echo "  4) VARA FM Modem Only"
+  echo ""
+  echo -e "${YELLOW}════════════════════════════════════════════════════════════${NC}"
+  echo ""
+  echo "  A) AIOC Options"
+  echo "  R) Radio Configuration"
+  echo "  S) System Tools"
+  echo ""
+  echo -e "${YELLOW}════════════════════════════════════════════════════════════${NC}"
+  echo ""
+  echo "  Q) Quit"
+  echo ""
+  echo -n "Enter choice: "
 }
 
 ################################################################################
@@ -953,224 +621,34 @@ main() {
   while true; do
     show_menu
     read -r CHOICE
-    
+
     # Convert to uppercase for letter choices
     CHOICE=$(echo "$CHOICE" | tr '[:lower:]' '[:upper:]')
 
     case "${CHOICE}" in
       1)
-        if ! check_vara_installed; then
-          # Install VARA tools
-          launch_vara_installer
-        else
-          # VarAC + VARA HF
-          global_cleanup
-          
-          echo
-          echo -e "${BLUE}Selected: VarAC + VARA HF${NC}"
-          
-          PORT=$(find_free_port) || {
-            echo -e "${RED}ERROR: No free port found in 8300-8350${NC}"
-            sleep 3
-            continue
-          }
-          echo -e "${GREEN}Using TCP port: ${PORT}${NC}"
-          
-          echo
-          echo "Updating INI files..."
-          patch_vara_ini_port "HF" "${PORT}"
-          patch_varac_ini "HF" "${PORT}"
-          
-          echo
-          # Start VarAC first, then VARA to avoid crashes
-          start_varac
-          sleep 2
-          start_vara_hf
-          
-          echo
-          echo -e "${GREEN}================================================================${NC}"
-          echo -e "${GREEN}  Launch complete - VarAC + VARA HF${NC}"
-          echo -e "${GREEN}================================================================${NC}"
-          echo
-          read -r -p "Press Enter to return to menu..."
-        fi
-        ;;
-
-      2)
-        # VarAC + VARA FM
-        if ! check_vara_installed; then
-          echo -e "${RED}VARA Tools not installed. Please choose option 1 first.${NC}"
-          sleep 3
-          continue
-        fi
-        
-        global_cleanup
-        
-        echo
-        echo -e "${BLUE}Selected: VarAC + VARA FM${NC}"
-        
-        PORT=$(find_free_port) || {
-          echo -e "${RED}ERROR: No free port found in 8300-8350${NC}"
-          sleep 3
-          continue
-        }
-        echo -e "${GREEN}Using TCP port: ${PORT}${NC}"
-        
-        echo
-        echo "Updating INI files..."
-        patch_vara_ini_port "FM" "${PORT}"
-        patch_varac_ini "FM" "${PORT}"
-        
-        echo
-        # Start VarAC first, then VARA to avoid crashes
-        start_varac
-        sleep 2
-        start_vara_fm
-        
-        echo
-        echo -e "${GREEN}================================================================${NC}"
-        echo -e "${GREEN}  Launch complete - VarAC + VARA FM${NC}"
-        echo -e "${GREEN}================================================================${NC}"
-        echo
-        read -r -p "Press Enter to return to menu..."
-        ;;
-
-      3)
-        # Winlink + VARA HF
-        if ! check_vara_installed; then
-          echo -e "${RED}VARA Tools not installed. Please choose option 1 first.${NC}"
-          sleep 3
-          continue
-        fi
-        
-        global_cleanup
-        
-        echo
-        echo -e "${BLUE}Selected: Winlink + VARA HF${NC}"
-        
-        PORT=$(find_free_port) || {
-          echo -e "${RED}ERROR: No free port found in 8300-8350${NC}"
-          sleep 3
-          continue
-        }
-        echo -e "${GREEN}Using TCP port: ${PORT}${NC}"
-        
-        echo
-        echo "Updating INI files..."
-        patch_vara_ini_port "HF" "${PORT}"
-        patch_winlink_ini "HF" "${PORT}"
-        
-        echo
-        start_vara_hf
-        start_winlink
-        
-        echo
-        echo -e "${GREEN}================================================================${NC}"
-        echo -e "${GREEN}  Launch complete - Winlink + VARA HF${NC}"
-        echo -e "${GREEN}================================================================${NC}"
-        echo
-        read -r -p "Press Enter to return to menu..."
-        ;;
-
-      4)
-        # Winlink + VARA FM
-        if ! check_vara_installed; then
-          echo -e "${RED}VARA Tools not installed. Please choose option 1 first.${NC}"
-          sleep 3
-          continue
-        fi
-        
-        global_cleanup
-        
-        echo
-        echo -e "${BLUE}Selected: Winlink + VARA FM${NC}"
-        
-        PORT=$(find_free_port) || {
-          echo -e "${RED}ERROR: No free port found in 8300-8350${NC}"
-          sleep 3
-          continue
-        }
-        echo -e "${GREEN}Using TCP port: ${PORT}${NC}"
-        
-        echo
-        echo "Updating INI files..."
-        patch_vara_ini_port "FM" "${PORT}"
-        patch_winlink_ini "FM" "${PORT}"
-        
-        # Give the INI changes time to be written to disk
-        sync
-        sleep 1
-        
-        echo
-        start_vara_fm
-        
-        # Wait for VARA FM to fully initialize before starting Winlink
-        sleep 3
-        
-        start_winlink
-        
-        echo
-        echo -e "${GREEN}================================================================${NC}"
-        echo -e "${GREEN}  Launch complete - Winlink + VARA FM${NC}"
-        echo -e "${GREEN}================================================================${NC}"
-        echo
-        read -r -p "Press Enter to return to menu..."
-        ;;
-
-      5)
-        # Winlink Other (no VARA)
-        if ! check_vara_installed; then
-          echo -e "${RED}VARA Tools not installed. Please choose option 1 first.${NC}"
-          sleep 3
-          continue
-        fi
-        
-        global_cleanup
-        
-        echo
-        echo -e "${BLUE}Selected: Winlink Other (ARDOP/Telnet - no VARA)${NC}"
-        
-        echo
-        start_winlink
-        
-        echo
-        echo -e "${GREEN}================================================================${NC}"
-        echo -e "${GREEN}  Winlink started without VARA modem${NC}"
-        echo -e "${GREEN}================================================================${NC}"
-        echo -e "${GREEN}Use ARDOP, Telnet, or other non-VARA modes${NC}"
-        echo
-        read -r -p "Press Enter to return to menu..."
-        ;;
-
-      6)
         # Pat + VARA HF
-        if ! check_vara_installed; then
-          echo -e "${RED}VARA Tools not installed. Please choose option 1 first.${NC}"
-          sleep 3
-          continue
-        fi
-        
         global_cleanup
-        
+
         echo
         echo -e "${BLUE}Selected: Pat + VARA HF${NC}"
-        
+
         PORT=$(find_free_port) || {
           echo -e "${RED}ERROR: No free port found in 8300-8350${NC}"
           sleep 3
           continue
         }
         echo -e "${GREEN}Using TCP port: ${PORT}${NC}"
-        
+
         echo
         echo "Updating configuration files..."
         patch_vara_ini_port "HF" "${PORT}"
         configure_pat "HF" "${PORT}"
-        
+
         echo
         start_vara_hf
         start_pat
-        
+
         echo
         echo -e "${GREEN}================================================================${NC}"
         echo -e "${GREEN}  Launch complete - Pat + VARA HF${NC}"
@@ -1179,35 +657,29 @@ main() {
         read -r -p "Press Enter to return to menu..."
         ;;
 
-      7)
+      2)
         # Pat + VARA FM
-        if ! check_vara_installed; then
-          echo -e "${RED}VARA Tools not installed. Please choose option 1 first.${NC}"
-          sleep 3
-          continue
-        fi
-        
         global_cleanup
-        
+
         echo
         echo -e "${BLUE}Selected: Pat + VARA FM${NC}"
-        
+
         PORT=$(find_free_port) || {
           echo -e "${RED}ERROR: No free port found in 8300-8350${NC}"
           sleep 3
           continue
         }
         echo -e "${GREEN}Using TCP port: ${PORT}${NC}"
-        
+
         echo
         echo "Updating configuration files..."
         patch_vara_ini_port "FM" "${PORT}"
         configure_pat "FM" "${PORT}"
-        
+
         echo
         start_vara_fm
         start_pat
-        
+
         echo
         echo -e "${GREEN}================================================================${NC}"
         echo -e "${GREEN}  Launch complete - Pat + VARA FM${NC}"
@@ -1216,32 +688,26 @@ main() {
         read -r -p "Press Enter to return to menu..."
         ;;
 
-      8)
+      3)
         # VARA HF Modem Only
-        if ! check_vara_installed; then
-          echo -e "${RED}VARA Tools not installed. Please choose option 1 first.${NC}"
-          sleep 3
-          continue
-        fi
-        
         global_cleanup
-        
+
         echo
         echo -e "${BLUE}Selected: VARA HF Modem Only${NC}"
-        
+
         PORT=$(find_free_port) || {
           echo -e "${RED}ERROR: No free port found in 8300-8350${NC}"
           sleep 3
           continue
         }
-        
+
         echo
         echo "Updating INI files..."
         patch_vara_ini_port "HF" "${PORT}"
-        
+
         echo
         start_vara_hf
-        
+
         IP_ADDR=$(get_primary_ip)
         echo
         echo -e "${GREEN}================================================================${NC}"
@@ -1253,32 +719,26 @@ main() {
         read -r -p "Press Enter to return to menu..."
         ;;
 
-      9)
+      4)
         # VARA FM Modem Only
-        if ! check_vara_installed; then
-          echo -e "${RED}VARA Tools not installed. Please choose option 1 first.${NC}"
-          sleep 3
-          continue
-        fi
-        
         global_cleanup
-        
+
         echo
         echo -e "${BLUE}Selected: VARA FM Modem Only${NC}"
-        
+
         PORT=$(find_free_port) || {
           echo -e "${RED}ERROR: No free port found in 8300-8350${NC}"
           sleep 3
           continue
         }
-        
+
         echo
         echo "Updating INI files..."
         patch_vara_ini_port "FM" "${PORT}"
-        
+
         echo
         start_vara_fm
-        
+
         IP_ADDR=$(get_primary_ip)
         echo
         echo -e "${GREEN}================================================================${NC}"
@@ -1291,17 +751,14 @@ main() {
         ;;
 
       A)
-        # AIOC Options submenu
         show_aioc_menu
         ;;
 
       R)
-        # Radio Configuration submenu
         show_radio_menu
         ;;
 
       S)
-        # System Tools submenu
         show_system_menu
         ;;
 

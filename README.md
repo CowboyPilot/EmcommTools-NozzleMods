@@ -1,8 +1,6 @@
 # NozzleMods for EmComm Tools R6
 
-A comprehensive collection of scripts and tools to enhance EmComm Tools R6 with VARA modem support, AIOC DireWolf integration, radio configuration utilities, and system maintenance tools.
-
-**** NOTE: Updates are underway for R6 support.  Notably the VARA/VARAC/WLE installer is currently only partially functional as well as Chirp installation.  If you come across other issues please report them as a bug.  Thanks! *** 
+A collection of scripts and tools to enhance EmComm Tools R6 with VARA modem launching (via Pat), AIOC DireWolf integration, radio configuration utilities, and system maintenance tools.
 
 ## Quick Installation
 
@@ -26,10 +24,8 @@ The installer clones the entire repository to `~/NozzleMods/` with the following
 NozzleMods/
 ├── install.sh                          # Installer (for easy updates)
 ├── wine-tools/
-│   ├── bin/
-│   │   └── nozzle-menu                # Main menu launcher
-│   ├── wine-setup.sh                  # VARA tools installer
-│   └── fix-varac-13.sh                # Fix .NET issues with VarAC V13
+│   └── bin/
+│       └── nozzle-menu                # Main menu launcher
 ├── radio-tools/
 │   ├── xiegu-g90/
 │   │   └── update-g90-config.sh       # Configure G90 DigiRig PTT
@@ -38,7 +34,12 @@ NozzleMods/
 │   │   ├── yaesu-ft710.json           # Radio configuration
 │   │   ├── 78-et-ft710.rules          # udev rules
 │   │   └── udev-tester.patch          # System patches
-│   └── aioc/                          # ⭐ NEW: AIOC Support
+│   ├── anytone-578/
+│   │   ├── install_anytone578.sh      # Install Anytone 578 support
+│   │   ├── anytone-578.json           # Radio configuration
+│   │   ├── anytone-578.sh             # Audio script
+│   │   └── udev-tester.patch          # System patches
+│   └── aioc/
 │       ├── install_aioc.sh            # Install AIOC support
 │       ├── aioc.json                  # AIOC radio configuration
 │       ├── 93-aioc.rules              # AIOC udev rules
@@ -56,12 +57,11 @@ The installer also copies `nozzle-menu` to `/opt/emcomm-tools/bin/` for system-w
 
 Before using NozzleMods, ensure you have:
 
-1. **EmComm Tools R6** properly installed
+1. **EmComm Tools R6** properly installed (includes Wine, VARA, Winlink Express, and VarAC)
 2. Run `et-user` to configure your callsign
 3. Run `et-audio` to configure audio
 4. Run `et-radio` to select your radio
-5. **For VARA tools**: Download VarAC Installer to `~/Downloads` (must follow naming: `VarAC_Installer_V*.exe`)
-6. **For AIOC**: Have your AIOC hardware connected via USB
+5. **For AIOC**: Have your AIOC hardware connected via USB
 
 ## Main Menu: nozzle-menu
 
@@ -73,26 +73,24 @@ nozzle-menu
 
 The menu provides organized access to:
 
-### 🎯 VARA Applications (Options 1-9)
+### VARA Applications (Options 1-4)
 
-Launch Windows applications via Wine with automatic configuration:
+Launch VARA modems with automatic port allocation and configuration:
 
-* **VarAC + VARA HF/FM** - Digital chat modes
-* **Winlink + VARA HF/FM** - Email over radio
-* **Winlink Other** - ARDOP/Telnet modes (no VARA)
-* **Pat + VARA HF/FM** - Web-based Winlink client
-* **VARA Modems Only** - Standalone modem servers
+* **Pat + VARA HF** - Web-based Winlink client with VARA HF modem
+* **Pat + VARA FM** - Web-based Winlink client with VARA FM modem
+* **VARA HF Modem Only** - Standalone VARA HF modem server
+* **VARA FM Modem Only** - Standalone VARA FM modem server
 
 **Features:**
-* Automatic port allocation (8300-8350 range)
+* Automatic free port detection (8300-8350 range)
 * Clean process management (kills old instances)
-* Automatic INI file configuration
-* COM10 mapping to `/dev/et-cat`
-* Prevents VARA auto-launch conflicts
+* Automatic VARA INI file configuration
+* Pat template configuration with callsign/grid substitution
 
 ---
 
-### 📡 AIOC Options (Option A) ⭐ NEW
+### AIOC Options (Option A)
 
 Three pre-configured DireWolf modes for AIOC hardware:
 
@@ -116,47 +114,23 @@ Perfect for digital modes, APRS, and packet radio with any K1-style connector ra
 
 ---
 
-### ⚙️ Radio Configuration (Option R)
+### Radio Configuration (Option R)
 
 1. **Xiegu G90 DigiRig PTT** - Configure PTT mode (CAT or RTS)
 2. **Yaesu FT-710 Support** - Full installation with udev rules
-3. **AIOC Support** - Install AIOC with DireWolf configurations
+3. **Anytone 578 Support** - Install with Digirig Mobile integration
+4. **AIOC Support** - Install AIOC with DireWolf configurations
 
 ---
 
-### 🔧 System Tools (Option S)
+### System Tools (Option S)
 
 1. **Fix APT Sources** - Repair broken repository sources (Ubuntu 22.10/kinetic)
-2. **Fix VarAC V13** - Resolve .NET runtime issues
-3. **Update NozzleMods** - Download and install latest version from GitHub
+2. **Update NozzleMods** - Download and install latest version from GitHub
 
 ---
 
 ## Detailed Feature Documentation
-
-### VARA Tools Installation
-
-If VARA tools aren't installed, nozzle-menu offers to run the installer, which:
-
-1. Creates 32-bit Wine prefix at `~/.wine32`
-2. Installs dependencies (dotnet48, vcrun2015, etc.)
-3. Downloads and installs:
-   * Winlink Express
-   * VARA HF
-   * VARA FM
-   * VarAC (if installer available in ~/Downloads)
-4. Configures COM10 → /dev/et-cat mapping
-5. Creates GNOME menu launchers
-
-**Manual installation:**
-```bash
-cd ~/NozzleMods/wine-tools
-./wine-setup.sh
-```
-
-**Important**: First run may require logout/login to activate 32-bit Wine environment.
-
----
 
 ### AIOC Installation & Configuration
 
@@ -239,11 +213,6 @@ Choose between:
 * **CAT PTT** - PTT via CAT commands
 * **RTS PTT** - PTT via RTS serial line
 
-**Menu Settings:**
-* Set appropriate audio levels
-* Enable DATA mode if available
-* Adjust MIC gain for clean digital signal
-
 ---
 
 #### Yaesu FT-710
@@ -258,7 +227,7 @@ sudo ./install_ft710.sh
 **Required FT-710 Menu Settings:**
 * **CAT RATE** = 38400bps
 * **CAT TOT** = 100ms
-* **FUNC → RADIO SETTING → MODE PSK/DATA:**
+* **FUNC -> RADIO SETTING -> MODE PSK/DATA:**
   + USB OUT LEVEL = 30
   + USB MOD GAIN = 70
 * Select operating mode: **DATA-U**
@@ -268,15 +237,46 @@ sudo ./install_ft710.sh
 * Creates `/dev/et-cat` and `/dev/et-audio` symlinks
 * Patches EmComm Tools for FT-710 support
 * Automatic backup creation
-<<<<<<< HEAD
-* ALSA MIXER profile now loads when et-mode is run
-=======
-* Alsa Configuration Updated
->>>>>>> origin/main
+* ALSA mixer profile loads when et-mode is run
 
 **Backup Location:**
 ```bash
 ~/.ft710-backup/udev-tester.sh.backup
+```
+
+---
+
+#### Anytone 578
+
+Install support for the Anytone 578 with Digirig Mobile:
+
+```bash
+cd ~/NozzleMods/radio-tools/anytone-578
+./install_anytone578.sh
+```
+
+**Features:**
+* Uses existing Digirig Mobile udev rules (no additional rules needed)
+* Installs radio configuration and audio script
+* Patches udev-tester.sh to recognize the Anytone 578
+* Automatic backup creation
+
+**Radio Settings:**
+* Set VFO A Active in VFO Mode
+* Settings -> (1) Radio Set -> (4) Other Func -> (6) Ana Sq Level to 0
+* Do not enable VOX on radio
+* Do not enable mic volt det (Leave as UART)
+
+**Audio Settings (applied by audio script):**
+* Speaker (TX): 50% unmuted
+* Mic Playback: Muted
+* Mic Capture (RX): 19% unmuted
+* Auto Gain Control: Disabled
+* Adjust with `alsamixer` if needed
+
+**Backup Location:**
+```bash
+~/.anytone578-backup/udev-tester.sh.backup
 ```
 
 ---
@@ -298,27 +298,12 @@ sudo ~/NozzleMods/linux-tools/fix-sources.sh
 
 ---
 
-### Fix VarAC V13 .NET Issues
-
-VarAC V13 requires specific .NET runtime versions:
-
-```bash
-~/NozzleMods/wine-tools/fix-varac-13.sh
-```
-
-**Fixes:**
-* Installs correct .NET Framework versions
-* Resolves Wine-specific compatibility issues
-* No need to reinstall VarAC
-
----
-
 ## Updating NozzleMods
 
 ### Method 1: Via nozzle-menu
 ```bash
 nozzle-menu
-# Select: S) System Tools → 3) Update NozzleMods Tools
+# Select: S) System Tools -> 2) Update NozzleMods Tools
 ```
 
 ### Method 2: Re-run installer
@@ -336,23 +321,10 @@ curl -fsSL https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/
 * Backs up existing installation with timestamp
 * Copies all new/updated files
 * Updates nozzle-menu in system bin directory
-* Preserves your Wine prefix and configurations
 
 ---
 
 ## Troubleshooting
-
-### VARA Applications Won't Start
-
-**Check installation:**
-```bash
-ls ~/.wine32
-ls ~/.wine32/drive_c/VARA/
-```
-
-**If missing:** Run installer from nozzle-menu Option 1 (if VARA not installed)
-
----
 
 ### Port Conflicts
 
@@ -380,11 +352,6 @@ ls -l /dev/et-cat /dev/et-audio
 sudo udevadm monitor
 ```
 
-**Check udev rules:**
-```bash
-ls -l /etc/udev/rules.d/*aioc* /etc/udev/rules.d/*ft710* /etc/udev/rules.d/*g90*
-```
-
 ---
 
 ### AIOC Issues
@@ -406,13 +373,6 @@ arecord -l | grep -i aioc
 ls -l /dev/ttyACM*
 ```
 
-**Test DireWolf configuration:**
-```bash
-cd /opt/emcomm-tools/conf/template.d/packet
-direwolf -c direwolf.aioc-simple.conf -t 0
-# Press Ctrl+C to exit test mode
-```
-
 **Adjust audio levels:**
 ```bash
 alsamixer
@@ -422,85 +382,10 @@ alsamixer
 
 ---
 
-### VarAC V13 Crashes
-
-Run the .NET fix:
-```bash
-~/NozzleMods/wine-tools/fix-varac-13.sh
-```
-
----
-
-### First-Run Configuration Issues
-
-**Winlink Express:**
-* Configure callsign and grid square on first run
-* Disable "Auto Launch Vara" and "Auto Launch Vara FM" in Vara TNC settings
-* The launcher will handle VARA startup
-
-**VarAC:**
-* Configure callsign and grid square
-* In VARA HF/FM settings: Disable all "Launch" and "AutoStart" options
-* Set COM Port to COM10
-* Baud rate should match your radio (usually 38400)
-
----
-
-## File Locations
-
-| Item | Location |
-|------|----------|
-| User Scripts | `~/NozzleMods/` |
-| nozzle-menu | `/opt/emcomm-tools/bin/nozzle-menu` |
-| Wine Prefix | `~/.wine32/` |
-| EmComm Tools | `/opt/emcomm-tools/` |
-| ET Configuration | `~/.config/emcomm-tools/` |
-| AIOC Backups | `~/.aioc-backup/` |
-| FT-710 Backups | `~/.ft710-backup/` |
-| G90 Backups | `/opt/emcomm-tools/conf/radios.d/*.backup.*` |
-
----
-
-## Advanced Usage
-
-### Manual AIOC DireWolf Launch
-
-```bash
-# Start with specific config
-aioc-direwolf start aioc-simple
-
-# Check status
-aioc-direwolf status
-
-# Stop running instance
-aioc-direwolf stop
-
-# View logs
-journalctl -f | grep direwolf
-```
-
----
-
-### Custom DireWolf Configurations
-
-Edit configurations in:
-```bash
-/opt/emcomm-tools/conf/template.d/packet/direwolf.aioc-*.conf
-```
-
-After editing, restart:
-```bash
-aioc-direwolf stop
-aioc-direwolf start aioc-simple  # Or packet/aprs
-```
-
----
-
 ### VARA Port Configuration
 
-Ports are automatically assigned (8300-8350). To manually set:
+Ports are automatically assigned (8300-8350). To manually set, edit INI files:
 
-Edit INI files:
 ```bash
 # VARA HF
 ~/.wine32/drive_c/VARA/VARA.ini
@@ -516,29 +401,44 @@ TCP Command Port=8300
 
 ---
 
+## File Locations
+
+| Item | Location |
+|------|----------|
+| User Scripts | `~/NozzleMods/` |
+| nozzle-menu | `/opt/emcomm-tools/bin/nozzle-menu` |
+| Wine Prefix | `~/.wine32/` |
+| EmComm Tools | `/opt/emcomm-tools/` |
+| ET Configuration | `~/.config/emcomm-tools/` |
+| AIOC Backups | `~/.aioc-backup/` |
+| FT-710 Backups | `~/.ft710-backup/` |
+| Anytone 578 Backups | `~/.anytone578-backup/` |
+| G90 Backups | `/opt/emcomm-tools/conf/radios.d/*.backup.*` |
+
+---
+
 ## Supported Hardware
 
 ### Radios
-* ✅ Xiegu G90 (with DigiRig)
-* ✅ Yaesu FT-710
-* ✅ Any radio compatible with AIOC (K1-style connector)
-* ✅ Any radio supported by EmComm Tools R5
+* Xiegu G90 (with DigiRig)
+* Yaesu FT-710
+* Anytone 578 (with Digirig Mobile)
+* Any radio compatible with AIOC (K1-style connector)
+* Any radio supported by EmComm Tools R6
 
 ### Interfaces
-* ✅ DigiRig Mobile
-* ✅ AIOC (All-In-One-Cable)
-* ✅ Standard USB-to-serial adapters
-* ✅ Built-in USB interfaces
+* DigiRig Mobile
+* AIOC (All-In-One-Cable)
+* Standard USB-to-serial adapters
+* Built-in USB interfaces
 
 ---
 
 ## Credits
 
-* **EmComm Tools R5** by [TheTechPrepper](https://github.com/thetechprepper)
+* **EmComm Tools R6** by [TheTechPrepper](https://github.com/thetechprepper)
 * **AIOC Hardware** by [skuep](https://github.com/skuep/AIOC)
 * **VARA Modems** by Jose Alberto Reyes Martin, EA5HVK
-* **VarAC** by Irad Yakir
-* **Winlink Express** by Winlink Development Team
 * **DireWolf** by John Langner, WB2OSZ
 * **Pat Winlink** by Martin Hebnes Pedersen, LA5NTA
 
@@ -546,7 +446,7 @@ TCP Command Port=8300
 
 ## Contributing
 
-Found a bug? Have a suggestion? 
+Found a bug? Have a suggestion?
 
 1. Check existing [Issues](https://github.com/CowboyPilot/EmcommTools-NozzleMods/issues)
 2. Open a new issue with details
@@ -556,19 +456,24 @@ Found a bug? Have a suggestion?
 
 ## Version History
 
-### V1.2 (Latest)
-* ✨ Added complete AIOC support
-* ✨ Added three DireWolf profiles (Simple TNC, Packet Digi, APRS Digi)
-* ✨ Added AIOC Options menu to nozzle-menu
-* ✨ Added aioc-direwolf launcher script
-* 🔧 Improved installer to clone entire repository
-* 📝 Updated all documentation
+### V2.0 (Latest)
+* Updated for EmComm Tools R6
+* Removed VARA/Winlink/VarAC/Wine installation (now native to ETC R6)
+* Removed Chirp installation (available via ETC R6)
+* Added Anytone 578 support with Digirig Mobile
+* Streamlined menu to Pat + VARA and standalone VARA modem options
+
+### V1.2
+* Added complete AIOC support
+* Added three DireWolf profiles (Simple TNC, Packet Digi, APRS Digi)
+* Added AIOC Options menu to nozzle-menu
+* Added aioc-direwolf launcher script
+* Improved installer to clone entire repository
 
 ### V1.1
 * Added Yaesu FT-710 support
 * Improved VARA port handling
 * Added system tools menu
-* Bug fixes for VarAC V13
 
 ### V1.0
 * Initial release
@@ -580,7 +485,7 @@ Found a bug? Have a suggestion?
 
 ## License
 
-These scripts are provided as-is for use with EmComm Tools R5.
+These scripts are provided as-is for use with EmComm Tools R6.
 
 **USE AT YOUR OWN RISK**
 
@@ -603,11 +508,11 @@ Happy operating!
 # Launch main menu
 nozzle-menu
 
-# Launch VARA app (from menu)
-nozzle-menu → (1-9)
+# Launch VARA with Pat (from menu)
+nozzle-menu -> (1-4)
 
 # Launch AIOC mode (from menu)
-nozzle-menu → A → (1-3)
+nozzle-menu -> A -> (1-3)
 
 # Configure radio
 et-radio
@@ -634,9 +539,7 @@ ls -l /dev/et-*
 
 ### AIOC Quick Start
 1. `nozzle-menu`
-2. Select: `R) Radio Configuration → 3) Install AIOC`
+2. Select: `R) Radio Configuration -> 4) Install AIOC`
 3. Reboot or reload udev
 4. `et-radio` - Select "AIOC"
-5. `nozzle-menu → A` - Launch AIOC mode
-
----
+5. `nozzle-menu -> A` - Launch AIOC mode

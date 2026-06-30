@@ -1,6 +1,6 @@
 #!/bin/bash
 ################################################################################
-# NozzleMods Installer for EmComm Tools R5
+# NozzleMods Installer for EmComm Tools R6
 #
 # This script clones the NozzleMods repository and installs all tools:
 #   - nozzle-menu → /opt/emcomm-tools/bin/
@@ -262,26 +262,19 @@ show_next_steps() {
   echo "All tools have been installed to:"
   echo "  ${NOZZLE_DIR}"
   echo
-  echo "Place the VarAC installer in ~/Downloads then run nozzle-menu to install"
-  echo "the VARA Apps and optional System/Radio options."
-  echo
-  echo "If you have already installed VARA from the menu you can run"
-  echo "~/NozzleMods/wine-tools/wine-setup.sh to install VarAC"
-  
+  echo "Run nozzle-menu to launch VARA with Pat or access Radio/System options."
+
   print_header "Quick Start"
-  
+
   echo -e "${BLUE}To access all features:${NC}"
   echo "  nozzle-menu"
   echo
   echo -e "${BLUE}Or run tools directly:${NC}"
   echo
-  echo -e "${YELLOW}Wine/VARA Tools:${NC}"
-  echo "  ${NOZZLE_DIR}/wine-tools/wine-setup.sh"
-  echo "  ${NOZZLE_DIR}/wine-tools/fix-varac-13.sh"
-  echo
   echo -e "${YELLOW}Radio Configuration:${NC}"
   echo "  sudo ${NOZZLE_DIR}/radio-tools/xiegu-g90/update-g90-config.sh"
   echo "  sudo ${NOZZLE_DIR}/radio-tools/yaesu-ft710/install_ft710.sh"
+  echo "  ${NOZZLE_DIR}/radio-tools/anytone-578/install_anytone578.sh"
   echo "  sudo ${NOZZLE_DIR}/radio-tools/aioc/install_aioc.sh"
   echo
   echo -e "${YELLOW}Linux System Tools:${NC}"
@@ -307,7 +300,7 @@ main() {
   echo
   echo -e "${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
   echo -e "${GREEN}║                                                            ║${NC}"
-  echo -e "${GREEN}║              NozzleMods Installer for ETC R5               ║${NC}"
+  echo -e "${GREEN}║              NozzleMods Installer for ETC R6               ║${NC}"
   echo -e "${GREEN}║                                                            ║${NC}"
   echo -e "${GREEN}╚════════════════════════════════════════════════════════════╝${NC}"
   echo
