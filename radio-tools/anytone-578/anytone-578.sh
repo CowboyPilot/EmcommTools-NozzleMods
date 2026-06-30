@@ -34,12 +34,3 @@ amixer -q -c ${AUDIO_CARD} sset Mic Capture Switch 13% unmute
 amixer -q -c ${AUDIO_CARD} sset 'Auto Gain Control' mute
 
 et-log "Applied amixer settings for audio card ${AUDIO_CARD} on device ${ET_DEVICE_NAME}"
-
-# Re-apply after WirePlumber finishes restoring its saved device profile
-(sleep 3
- amixer -q -c ${AUDIO_CARD} sset Speaker Playback Switch 21% unmute
- amixer -q -c ${AUDIO_CARD} sset Mic Playback Switch 00% mute
- amixer -q -c ${AUDIO_CARD} sset Mic Capture Switch 13% unmute
- amixer -q -c ${AUDIO_CARD} sset 'Auto Gain Control' mute
- et-log "Re-applied amixer settings after WirePlumber settle"
-) &
