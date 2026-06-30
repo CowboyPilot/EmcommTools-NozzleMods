@@ -251,21 +251,16 @@ install_nozzle_menu() {
   print_success "nozzle-menu installed successfully"
 }
 
-install_direwolf_log_viewer() {
-  print_header "Installing DireWolf Log Viewer"
+install_desktop_shortcuts() {
+  print_header "Installing Desktop Shortcuts"
 
+  local desktop_dir="${HOME}/Desktop"
+  local apps_dir="/usr/share/applications"
+  mkdir -p "${desktop_dir}"
+
+  # Install direwolf-log-viewer script to ET bin
   local viewer_src="${NOZZLE_DIR}/bin/direwolf-log-viewer"
-  local desktop_src="${NOZZLE_DIR}/bin/direwolf-log-viewer.desktop"
-  local desktop_dest="${HOME}/Desktop/direwolf-log-viewer.desktop"
-  local apps_dest="/usr/share/applications/direwolf-log-viewer.desktop"
-
-  if [ ! -f "${viewer_src}" ]; then
-    print_warning "direwolf-log-viewer not found, skipping"
-    return 0
-  fi
-
-  # Install the script to /opt/emcomm-tools/bin
-  if [ -d "${ETC_BIN_DIR}" ]; then
+  if [ -f "${viewer_src}" ] && [ -d "${ETC_BIN_DIR}" ]; then
     if sudo cp "${viewer_src}" "${ETC_BIN_DIR}/" 2>/dev/null && \
        sudo chmod +x "${ETC_BIN_DIR}/direwolf-log-viewer" 2>/dev/null; then
       print_success "Installed direwolf-log-viewer to ${ETC_BIN_DIR}"
@@ -274,15 +269,17 @@ install_direwolf_log_viewer() {
     fi
   fi
 
-  # Install .desktop file to Desktop and applications
-  if [ -f "${desktop_src}" ]; then
-    cp "${desktop_src}" "${desktop_dest}" 2>/dev/null && \
-      chmod +x "${desktop_dest}" 2>/dev/null && \
-      print_success "Desktop shortcut created"
+  # Install .desktop files
+  for desktop_file in direwolf-log-viewer et-radio et-mode nozzle-menu; do
+    local src="${NOZZLE_DIR}/bin/${desktop_file}.desktop"
+    if [ -f "${src}" ]; then
+      cp "${src}" "${desktop_dir}/${desktop_file}.desktop" 2>/dev/null && \
+        chmod +x "${desktop_dir}/${desktop_file}.desktop" 2>/dev/null && \
+        print_success "Desktop shortcut: ${desktop_file}"
 
-    sudo cp "${desktop_src}" "${apps_dest}" 2>/dev/null && \
-      print_success "Application menu entry created"
-  fi
+      sudo cp "${src}" "${apps_dir}/${desktop_file}.desktop" 2>/dev/null
+    fi
+  done
 }
 
 ################################################################################
@@ -367,9 +364,9 @@ main() {
     echo "Continuing..."
   }
 
-  # Install DireWolf log viewer
+  # Install desktop shortcuts
   echo
-  install_direwolf_log_viewer
+  install_desktop_shortcuts
 
   # Show next steps
   echo

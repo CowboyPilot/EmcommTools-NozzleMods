@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Name=ET Radio
+Comment=EmComm Tools radio selection
+Exec=/opt/emcomm-tools/bin/et-radio
+Icon=emcomm-tools-icon-black-192
+Terminal=true
+Type=Application
+Categories=HamRadio;
+StartupNotify=false
