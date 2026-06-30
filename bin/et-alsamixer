@@ -1,0 +1,22 @@
+#!/bin/bash
+# Launch alsamixer for the ET audio device in All mode
+
+if [ ! -e /dev/et-audio ]; then
+  echo "No ET audio device detected (/dev/et-audio not found)."
+  echo "Plug in your radio interface and try again."
+  echo ""
+  read -r -p "Press Enter to exit..."
+  exit 1
+fi
+
+APLAY_OUT=$(arecord -l | grep ET_AUDIO)
+if [ $? -ne 0 ]; then
+  echo "ET_AUDIO device not found in arecord output."
+  echo ""
+  read -r -p "Press Enter to exit..."
+  exit 1
+fi
+
+AUDIO_CARD=$(echo "$APLAY_OUT" | cut -d":" -f1 | awk '{print $2}')
+
+exec alsamixer -c "${AUDIO_CARD}" -V all

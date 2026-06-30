@@ -260,7 +260,7 @@ install_desktop_shortcuts() {
 
   # Install log viewer scripts to ET bin
   if [ -d "${ETC_BIN_DIR}" ]; then
-    for viewer in direwolf-log-viewer ardop-log-viewer; do
+    for viewer in direwolf-log-viewer ardop-log-viewer et-alsamixer; do
       local viewer_src="${NOZZLE_DIR}/bin/${viewer}"
       if [ -f "${viewer_src}" ]; then
         if sudo cp "${viewer_src}" "${ETC_BIN_DIR}/" 2>/dev/null && \
@@ -274,7 +274,7 @@ install_desktop_shortcuts() {
   fi
 
   # Install .desktop files
-  for desktop_file in direwolf-log-viewer ardop-log-viewer et-radio et-mode et-kill-all nozzle-menu; do
+  for desktop_file in direwolf-log-viewer ardop-log-viewer et-alsamixer et-radio et-mode et-kill-all nozzle-menu; do
     local src="${NOZZLE_DIR}/bin/${desktop_file}.desktop"
     if [ -f "${src}" ]; then
       cp "${src}" "${desktop_dir}/${desktop_file}.desktop" 2>/dev/null && \
