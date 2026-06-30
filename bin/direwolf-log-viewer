@@ -1,12 +1,12 @@
 #!/bin/bash
 # Real-time DireWolf log viewer
-# Tails the systemd journal for all DireWolf services
+# Tails the systemd journal for all DireWolf services and AIOC modes
 
 echo "════════════════════════════════════════════════════════════"
 echo "  DireWolf Log Viewer"
 echo "════════════════════════════════════════════════════════════"
 echo ""
-echo "Watching: et-service-direwolf-* (systemd journal)"
+echo "Watching: et-service-direwolf-* + aioc-direwolf (systemd journal)"
 echo "Press Ctrl-C to exit"
 echo "════════════════════════════════════════════════════════════"
 echo ""
@@ -17,4 +17,5 @@ journalctl --user \
   -u et-service-direwolf-300 \
   -u et-service-direwolf-aprs-digipeater \
   -u et-service-direwolf-packet-digipeater \
+  -t aioc-direwolf \
   -n 100 -f

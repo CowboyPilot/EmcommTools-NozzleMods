@@ -397,7 +397,7 @@ launch_aioc_mode() {
   echo -e "${BLUE}Starting AIOC DireWolf in ${mode_name} mode...${NC}"
   echo
 
-  aioc-direwolf start "${mode}"
+  systemd-cat -t aioc-direwolf aioc-direwolf start "${mode}"
 
   echo
   echo -e "${GREEN}================================================================${NC}"
@@ -409,7 +409,7 @@ launch_aioc_mode() {
 
 start_aioc_direwolf_background() {
   echo -e "${BLUE}Starting AIOC DireWolf (1200 baud)...${NC}"
-  aioc-direwolf start aioc-simple &
+  systemd-cat -t aioc-direwolf aioc-direwolf start aioc-simple &
   DIREWOLF_PID=$!
 
   local elapsed=0
