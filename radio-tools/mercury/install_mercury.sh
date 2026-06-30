@@ -258,6 +258,25 @@ INIEOF
     echo -e "${GREEN}✓ mercury.ini installed to ${MERCURY_INI}${NC}"
 fi
 
+# Patch et-kill-all to stop Mercury
+ET_KILL_ALL="/opt/emcomm-tools/bin/et-kill-all"
+if [ -f "${ET_KILL_ALL}" ]; then
+    if ! grep -q "mercury" "${ET_KILL_ALL}"; then
+        echo ""
+        echo "Adding Mercury to et-kill-all..."
+        echo 'pkill -f "^mercury" 2>/dev/null || true' | sudo tee -a "${ET_KILL_ALL}" >/dev/null
+        if grep -q "mercury" "${ET_KILL_ALL}"; then
+            echo -e "${GREEN}✓ et-kill-all updated to stop Mercury${NC}"
+        else
+            echo -e "${YELLOW}⚠ Could not patch et-kill-all — you may need to stop Mercury manually${NC}"
+        fi
+    else
+        echo -e "${GREEN}✓ et-kill-all already handles Mercury${NC}"
+    fi
+else
+    echo -e "${YELLOW}⚠ et-kill-all not found at ${ET_KILL_ALL} — skipping patch${NC}"
+fi
+
 # Verify
 echo ""
 echo "Verifying installation..."
