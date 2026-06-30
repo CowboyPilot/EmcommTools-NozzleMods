@@ -7,7 +7,8 @@
 # Features:
 #   - VARA Tools launcher (Pat with VARA HF/FM, standalone VARA modems)
 #   - AIOC DireWolf modes (Simple TNC, Packet, APRS)
-#   - Install options (Xiegu G90, Yaesu FT-710, Anytone 578, Mercury, AIOC)
+#   - Radio options (G90 PTT mode, Anytone 578 commode)
+#   - Install options (Yaesu FT-710, Anytone 578, Mercury, AIOC)
 #   - System fixes and maintenance
 #
 ################################################################################
@@ -520,26 +521,42 @@ launch_aioc_winlink_packet() {
 }
 
 ################################################################################
-# Install Options Functions
+# Radio Options Functions
 ################################################################################
 
-configure_xiegu_g90() {
-  clear
-  echo -e "${GREEN}================================================================${NC}"
-  echo -e "${GREEN}           Xiegu G90 DigiRig Configuration${NC}"
-  echo -e "${GREEN}================================================================${NC}"
-  echo
+RADIOS_DIR="${ET_HOME}/conf/radios.d"
+G90_JSON="${RADIOS_DIR}/xiegu-g90.json"
+AT578_JSON="${RADIOS_DIR}/anytone-578.json"
 
-  if [[ -f "${NOZZLE_DIR}/radio-tools/xiegu-g90/update-g90-config.sh" ]]; then
-    sudo "${NOZZLE_DIR}/radio-tools/xiegu-g90/update-g90-config.sh"
+set_radio_config() {
+  local json_file="$1"
+  local description="$2"
+  shift 2
+
+  if [[ ! -f "${json_file}" ]]; then
+    echo -e "${RED}ERROR: Radio config not found: ${json_file}${NC}"
+    echo -e "${YELLOW}Install this radio first from Install Options.${NC}"
     echo
     read -r -p "Press Enter to return to menu..."
-  else
-    echo -e "${RED}ERROR: Script not found at ${NOZZLE_DIR}/radio-tools/xiegu-g90/update-g90-config.sh${NC}"
-    echo
-    read -r -p "Press Enter to return to menu..."
+    return 1
   fi
+
+  local tmp="${json_file}.tmp"
+  cp "${json_file}" "${tmp}"
+
+  while [[ $# -ge 2 ]]; do
+    local key="$1" val="$2"
+    shift 2
+    jq --arg v "${val}" "${key} = \$v" "${tmp}" > "${tmp}.2" && mv "${tmp}.2" "${tmp}"
+  done
+
+  sudo mv "${tmp}" "${json_file}"
+  echo -e "${GREEN}✓ ${description}${NC}"
 }
+
+################################################################################
+# Install Options Functions
+################################################################################
 
 install_yaesu_ft710() {
   clear
@@ -778,19 +795,20 @@ show_aioc_menu() {
   done
 }
 
-show_radio_menu() {
+show_radio_options_menu() {
   while true; do
     clear
     echo -e "${GREEN}================================================================${NC}"
-    echo -e "${GREEN}           Install Options${NC}"
+    echo -e "${GREEN}           Radio Options${NC}"
     echo -e "${GREEN}================================================================${NC}"
     echo ""
-    echo "  1) Configure Xiegu G90 DigiRig PTT"
-    echo "  2) Install Yaesu FT-710 Support"
-    echo "  3) Install Anytone 578 Support"
-    echo "  4) Install Custom Hamlib (Anytone 578 driver)"
-    echo "  5) Install Mercury Modem"
-    echo "  6) Install AIOC Support"
+    echo "Xiegu G90:"
+    echo "  1) Set G90 RTS PTT"
+    echo "  2) Set G90 CAT PTT"
+    echo ""
+    echo "Anytone 578:"
+    echo "  3) Anytone 578 Simple Mic PTT"
+    echo "  4) Anytone 578 Advanced BT-01 Emulation"
     echo ""
     echo "  B) Back to Main Menu"
     echo ""
@@ -801,21 +819,80 @@ show_radio_menu() {
 
     case "${CHOICE}" in
       1)
-        configure_xiegu_g90
+        set_radio_config "${G90_JSON}" "G90 set to RTS PTT (DigiRig default)" \
+          '.model' "G90 (DigiRig)" \
+          '.rigctrl.ptt' "RTS"
+        echo
+        read -r -p "Press Enter to return to menu..."
         ;;
       2)
-        install_yaesu_ft710
+        set_radio_config "${G90_JSON}" "G90 set to CAT PTT" \
+          '.model' "G90 (DR-CAT)" \
+          '.rigctrl.ptt' "RIG --set-conf=rts_state=OFF,stop_bits=2"
+        echo
+        read -r -p "Press Enter to return to menu..."
         ;;
       3)
-        install_anytone578
+        set_radio_config "${AT578_JSON}" "Anytone 578 set to Simple Mic PTT" \
+          '.model' "578 w/ CAT (Digirig Mob)" \
+          '.rigctrl.ptt' "RIG"
+        jq 'del(.rigctrl.conf)' "${AT578_JSON}" > "${AT578_JSON}.tmp" && sudo mv "${AT578_JSON}.tmp" "${AT578_JSON}"
+        echo
+        read -r -p "Press Enter to return to menu..."
         ;;
       4)
+        set_radio_config "${AT578_JSON}" "Anytone 578 set to Advanced BT-01 Emulation" \
+          '.model' "578 w/ BT-01 Emu (Digirig Mob)" \
+          '.rigctrl.ptt' "RIG" \
+          '.rigctrl.conf' "commode=1"
+        echo
+        read -r -p "Press Enter to return to menu..."
+        ;;
+      B)
+        return
+        ;;
+      *)
+        echo -e "${RED}Invalid choice${NC}"
+        sleep 2
+        ;;
+    esac
+  done
+}
+
+show_install_menu() {
+  while true; do
+    clear
+    echo -e "${GREEN}================================================================${NC}"
+    echo -e "${GREEN}           Install Options${NC}"
+    echo -e "${GREEN}================================================================${NC}"
+    echo ""
+    echo "  1) Install Yaesu FT-710 Support"
+    echo "  2) Install Anytone 578 Support"
+    echo "  3) Install Custom Hamlib (Anytone 578 driver)"
+    echo "  4) Install Mercury Modem"
+    echo "  5) Install AIOC Support"
+    echo ""
+    echo "  B) Back to Main Menu"
+    echo ""
+    echo -n "Enter choice: "
+
+    read -r CHOICE
+    CHOICE=$(echo "$CHOICE" | tr '[:lower:]' '[:upper:]')
+
+    case "${CHOICE}" in
+      1)
+        install_yaesu_ft710
+        ;;
+      2)
+        install_anytone578
+        ;;
+      3)
         install_hamlib_anytone
         ;;
-      5)
+      4)
         install_mercury
         ;;
-      6)
+      5)
         install_aioc
         ;;
       B)
@@ -885,7 +962,8 @@ show_menu() {
   echo -e "${YELLOW}════════════════════════════════════════════════════════════${NC}"
   echo ""
   echo "  A) AIOC Options"
-  echo "  R) Install Options"
+  echo "  I) Install Options"
+  echo "  R) Radio Options"
   echo "  S) System Tools"
   echo ""
   echo -e "${YELLOW}════════════════════════════════════════════════════════════${NC}"
@@ -1100,8 +1178,12 @@ main() {
         show_aioc_menu
         ;;
 
+      I)
+        show_install_menu
+        ;;
+
       R)
-        show_radio_menu
+        show_radio_options_menu
         ;;
 
       S)
