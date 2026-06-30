@@ -258,19 +258,23 @@ install_desktop_shortcuts() {
   local apps_dir="/usr/share/applications"
   mkdir -p "${desktop_dir}"
 
-  # Install direwolf-log-viewer script to ET bin
-  local viewer_src="${NOZZLE_DIR}/bin/direwolf-log-viewer"
-  if [ -f "${viewer_src}" ] && [ -d "${ETC_BIN_DIR}" ]; then
-    if sudo cp "${viewer_src}" "${ETC_BIN_DIR}/" 2>/dev/null && \
-       sudo chmod +x "${ETC_BIN_DIR}/direwolf-log-viewer" 2>/dev/null; then
-      print_success "Installed direwolf-log-viewer to ${ETC_BIN_DIR}"
-    else
-      print_warning "Could not install direwolf-log-viewer to ${ETC_BIN_DIR}"
-    fi
+  # Install log viewer scripts to ET bin
+  if [ -d "${ETC_BIN_DIR}" ]; then
+    for viewer in direwolf-log-viewer ardop-log-viewer; do
+      local viewer_src="${NOZZLE_DIR}/bin/${viewer}"
+      if [ -f "${viewer_src}" ]; then
+        if sudo cp "${viewer_src}" "${ETC_BIN_DIR}/" 2>/dev/null && \
+           sudo chmod +x "${ETC_BIN_DIR}/${viewer}" 2>/dev/null; then
+          print_success "Installed ${viewer} to ${ETC_BIN_DIR}"
+        else
+          print_warning "Could not install ${viewer} to ${ETC_BIN_DIR}"
+        fi
+      fi
+    done
   fi
 
   # Install .desktop files
-  for desktop_file in direwolf-log-viewer et-radio et-mode nozzle-menu; do
+  for desktop_file in direwolf-log-viewer ardop-log-viewer et-radio et-mode nozzle-menu; do
     local src="${NOZZLE_DIR}/bin/${desktop_file}.desktop"
     if [ -f "${src}" ]; then
       cp "${src}" "${desktop_dir}/${desktop_file}.desktop" 2>/dev/null && \

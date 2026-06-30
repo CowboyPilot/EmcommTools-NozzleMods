@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Name=ARDOP Log
+Comment=Real-time ARDOP modem log viewer
+Exec=/opt/emcomm-tools/bin/ardop-log-viewer
+Icon=utilities-terminal
+Terminal=true
+Type=Application
+Categories=HamRadio;
+StartupNotify=false

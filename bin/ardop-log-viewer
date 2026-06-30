@@ -1,0 +1,22 @@
+#!/bin/bash
+# Real-time ARDOP log viewer
+# Shows the last 100 journal entries and follows new output
+
+echo "════════════════════════════════════════════════════════════"
+echo "  ARDOP Log Viewer"
+echo "════════════════════════════════════════════════════════════"
+echo ""
+
+if ! systemctl --user list-unit-files et-service-ardop.service &>/dev/null; then
+  echo "ARDOP service not found."
+  echo ""
+  read -r -p "Press Enter to exit..."
+  exit 1
+fi
+
+echo "Watching: et-service-ardop (systemd journal)"
+echo "Press Ctrl-C to exit"
+echo "════════════════════════════════════════════════════════════"
+echo ""
+
+journalctl --user -u et-service-ardop -n 100 -f
