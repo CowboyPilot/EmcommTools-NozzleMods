@@ -84,10 +84,19 @@ Launch VARA modems with automatic port allocation and configuration:
 * **VARA HF Modem Only** - Standalone VARA HF modem server
 * **VARA FM Modem Only** - Standalone VARA FM modem server
 
-**Features:**
+### Mercury Modem (Options 5-6)
+
+Launch the Mercury HF modem with automatic port allocation:
+
+* **Mercury Standalone** - Mercury modem with web GUI for sound card configuration
+* **Pat + Mercury** - Web-based Winlink client with Mercury modem
+
+Mercury is compatible with any program that supports VARA — configure your client to connect to Mercury's ARQ ports just as you would with VARA. Note that Mercury does not handle PTT; your client program must manage its own PTT control via rigctld or CAT.
+
+**Shared Features (VARA & Mercury):**
 * Automatic free port detection (8300-8350 range)
 * Clean process management (kills old instances)
-* Automatic VARA INI file configuration
+* Automatic INI/config file updates
 * Pat template configuration with callsign/grid substitution
 
 ---
@@ -340,12 +349,17 @@ cd ~/NozzleMods/radio-tools/mercury
 * Disables internal Hamlib (`HAVE_HAMLIB=0`) to avoid conflicts
 * Builds and installs system-wide
 
-**Usage with rig control:**
-Since internal Hamlib is disabled, run rigctld separately:
-```bash
-rigctld -m 37001 -s 115200 -r /dev/et-cat &
-mercury
-```
+**Configuration:**
+The installer drops `~/mercury.ini` with sensible defaults:
+* Web GUI enabled on port 10000 (`http://127.0.0.1:10000`)
+* Internal Hamlib disabled (`radio_model = -1`)
+* Connects to rigctld at `127.0.0.1:4532`
+* ARQ ports at 8300/8301 (VARA-compatible)
+
+Use the web GUI to select and adjust your sound card settings.
+
+**Compatibility:**
+Mercury is compatible with any program that supports VARA — configure the program to connect to Mercury's ARQ ports just as you would with VARA. Mercury does not control PTT; your client program must handle its own PTT control via rigctld or CAT.
 
 **Rerun to update:** The build directory is kept at `~/mercury-build`. Rerunning the script pulls the latest source and rebuilds.
 
@@ -578,8 +592,8 @@ Happy operating!
 # Launch main menu
 nozzle-menu
 
-# Launch VARA with Pat (from menu)
-nozzle-menu -> (1-4)
+# Launch VARA or Mercury with Pat (from menu)
+nozzle-menu -> (1-6)
 
 # Launch AIOC mode (from menu)
 nozzle-menu -> A -> (1-3)
