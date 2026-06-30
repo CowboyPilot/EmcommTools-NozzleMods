@@ -7,7 +7,7 @@
 # Features:
 #   - VARA Tools launcher (Pat with VARA HF/FM, standalone VARA modems)
 #   - AIOC DireWolf modes (Simple TNC, Packet, APRS)
-#   - Radio configuration (Xiegu G90, Yaesu FT-710, AIOC)
+#   - Install options (Xiegu G90, Yaesu FT-710, Anytone 578, Mercury, AIOC)
 #   - System fixes and maintenance
 #
 ################################################################################
@@ -298,7 +298,7 @@ patch_mercury_ini_port() {
 
   if [[ ! -f "${MERCURY_INI}" ]]; then
     echo -e "${YELLOW}  ! mercury.ini not found at ${MERCURY_INI}${NC}"
-    echo -e "${YELLOW}    Run 'Install Mercury Modem' from Radio Configuration first${NC}"
+    echo -e "${YELLOW}    Run 'Install Mercury Modem' from Install Options first${NC}"
     return 1
   fi
 
@@ -319,19 +319,18 @@ patch_mercury_ini_port() {
 start_mercury() {
   if ! command -v mercury &>/dev/null; then
     echo -e "${RED}ERROR: 'mercury' command not found${NC}"
-    echo -e "${YELLOW}Please install Mercury first from Radio Configuration menu${NC}"
+    echo -e "${YELLOW}Please install Mercury first from Install Options menu${NC}"
     return 1
   fi
 
   if [[ ! -f "${MERCURY_INI}" ]]; then
     echo -e "${RED}ERROR: mercury.ini not found at ${MERCURY_INI}${NC}"
-    echo -e "${YELLOW}Please install Mercury first from Radio Configuration menu${NC}"
+    echo -e "${YELLOW}Please install Mercury first from Install Options menu${NC}"
     return 1
   fi
 
   echo -e "${GREEN}>>> Starting Mercury modem...${NC}"
-  cd "${HOME}"
-  mercury &>/dev/null &
+  mercury -C "${MERCURY_INI}" &>/dev/null &
   sleep 2
 }
 
@@ -375,7 +374,7 @@ launch_aioc_mode() {
 
   if ! command -v aioc-direwolf &>/dev/null; then
     echo -e "${RED}ERROR: aioc-direwolf command not found${NC}"
-    echo -e "${YELLOW}Please install AIOC support first from Radio Configuration menu${NC}"
+    echo -e "${YELLOW}Please install AIOC support first from Install Options menu${NC}"
     echo
     read -r -p "Press Enter to return to menu..."
     return 1
@@ -395,7 +394,7 @@ launch_aioc_mode() {
 }
 
 ################################################################################
-# Radio Configuration Functions
+# Install Options Functions
 ################################################################################
 
 configure_xiegu_g90() {
@@ -626,7 +625,7 @@ show_radio_menu() {
   while true; do
     clear
     echo -e "${GREEN}================================================================${NC}"
-    echo -e "${GREEN}           Radio Configuration Menu${NC}"
+    echo -e "${GREEN}           Install Options${NC}"
     echo -e "${GREEN}================================================================${NC}"
     echo ""
     echo "  1) Configure Xiegu G90 DigiRig PTT"
@@ -729,7 +728,7 @@ show_menu() {
   echo -e "${YELLOW}════════════════════════════════════════════════════════════${NC}"
   echo ""
   echo "  A) AIOC Options"
-  echo "  R) Radio Configuration"
+  echo "  R) Install Options"
   echo "  S) System Tools"
   echo ""
   echo -e "${YELLOW}════════════════════════════════════════════════════════════${NC}"
