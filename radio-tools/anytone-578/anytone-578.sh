@@ -20,15 +20,15 @@ fi
 AUDIO_CARD=$1
 ET_DEVICE_NAME=$2
 
-# Unmute Speaker and set the volume to 50%. Adjust if the remote station
+# Unmute Speaker and set the volume to 21%. Adjust if the remote station
 # can't decode you or if there is no output power on TX.
-amixer -q -c ${AUDIO_CARD} sset Speaker Playback Switch 50% unmute
+amixer -q -c ${AUDIO_CARD} sset Speaker Playback Switch 21% unmute
 
 # Mute Mic Playback
 amixer -q -c ${AUDIO_CARD} sset Mic Playback Switch 00% mute
 
-# Set Mic Capture to 19%. Adjust if you can't decode received audio.
-amixer -q -c ${AUDIO_CARD} sset Mic Capture Switch 19% unmute
+# Set Mic Capture to 13%. Adjust if you can't decode received audio.
+amixer -q -c ${AUDIO_CARD} sset Mic Capture Switch 13% unmute
 
 # Disable Auto Gain Control
 amixer -q -c ${AUDIO_CARD} sset 'Auto Gain Control' mute
