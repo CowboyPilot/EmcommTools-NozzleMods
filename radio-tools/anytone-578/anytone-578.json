@@ -16,7 +16,7 @@
     "--(It *will* work in channel mode if you are only using the default Mic Emulation PTT mode)",
     "2. Best results Settings - (1) Radio Set - (4) Other Func - (6) Ana Sq Level to 0",
     "3. Make sure Settings - (1) Radio Set - (1) Voice Func - (7) Speaker Mode is set to 1. Mic Spk or 3. Both",
-    "4. Start with volume on VFO A approximately 1/3 the way up",
+    "4. Start with volume on VFO A approximately 1/4 the way up.  The audio is pretty hot in Mic Spk only",
     "",
     "Do not enable VOX on radio, do not enable mic volt det (Leave as UART)"
   ],
