@@ -23,9 +23,8 @@ The installer clones the entire repository to `~/NozzleMods/` with the following
 ```
 NozzleMods/
 ├── install.sh                          # Installer (for easy updates)
-├── wine-tools/
-│   └── bin/
-│       └── nozzle-menu                # Main menu launcher
+├── bin/
+│   └── nozzle-menu                    # Main menu launcher
 ├── radio-tools/
 │   ├── xiegu-g90/
 │   │   └── update-g90-config.sh       # Configure G90 DigiRig PTT

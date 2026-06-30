@@ -4,7 +4,6 @@
 #
 # This script clones the NozzleMods repository and installs all tools:
 #   - nozzle-menu → /opt/emcomm-tools/bin/
-#   - wine-tools/ → ~/NozzleMods/wine-tools/
 #   - radio-tools/ → ~/NozzleMods/radio-tools/
 #   - linux-tools/ → ~/NozzleMods/linux-tools/
 #
@@ -176,9 +175,9 @@ install_files() {
   mkdir -p "${NOZZLE_DIR}"
   
   # Copy all directories from the cloned repo
-  print_info "Copying wine-tools..."
-  cp -r "${TEMP_CLONE_DIR}/wine-tools" "${NOZZLE_DIR}/"
-  
+  print_info "Copying bin..."
+  cp -r "${TEMP_CLONE_DIR}/bin" "${NOZZLE_DIR}/"
+
   print_info "Copying radio-tools..."
   cp -r "${TEMP_CLONE_DIR}/radio-tools" "${NOZZLE_DIR}/"
   
@@ -202,7 +201,7 @@ install_files() {
 install_nozzle_menu() {
   print_header "Installing Nozzle Menu"
   
-  local nozzle_menu_src="${NOZZLE_DIR}/wine-tools/bin/nozzle-menu"
+  local nozzle_menu_src="${NOZZLE_DIR}/bin/nozzle-menu"
   
   # Check if source file exists
   if [ ! -f "${nozzle_menu_src}" ]; then
