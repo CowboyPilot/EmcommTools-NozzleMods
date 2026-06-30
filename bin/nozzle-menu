@@ -454,6 +454,10 @@ install_anytone578() {
     cd "${NOZZLE_DIR}/radio-tools/anytone-578"
     bash install_anytone578.sh
     echo
+    echo -e "${YELLOW}NOTE: If this is your first time installing the Anytone 578,${NC}"
+    echo -e "${YELLOW}you must also run 'Install Custom Hamlib (Anytone 578 driver)'${NC}"
+    echo -e "${YELLOW}from the Install Options menu to get the AT-D578UVIII driver.${NC}"
+    echo
     read -r -p "Press Enter to return to menu..."
   else
     echo -e "${RED}ERROR: Anytone 578 tools not found at ${NOZZLE_DIR}/radio-tools/anytone-578/${NC}"
