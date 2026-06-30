@@ -527,6 +527,7 @@ launch_aioc_winlink_packet() {
 RADIOS_DIR="${ET_HOME}/conf/radios.d"
 G90_JSON="${RADIOS_DIR}/xiegu-g90.json"
 AT578_JSON="${RADIOS_DIR}/anytone-578.json"
+PAT_AX25_TEMPLATE="${ET_HOME}/conf/template.d/winlink/config.ax25-agw.json"
 
 set_radio_config() {
   local json_file="$1"
@@ -837,6 +838,10 @@ show_radio_options_menu() {
           '.model' "578 w/ CAT (Digirig Mob)" \
           '.rigctrl.ptt' "RIG"
         jq 'del(.rigctrl.conf)' "${AT578_JSON}" > "${AT578_JSON}.tmp" && sudo mv "${AT578_JSON}.tmp" "${AT578_JSON}"
+        if [[ -f "${PAT_AX25_TEMPLATE}" ]]; then
+          sudo jq 'del(.ax25.rig)' "${PAT_AX25_TEMPLATE}" > /tmp/pat-template.tmp && sudo mv /tmp/pat-template.tmp "${PAT_AX25_TEMPLATE}"
+          echo -e "${GREEN}✓ Pat AX.25 QSY disabled in template${NC}"
+        fi
         echo
         read -r -p "Press Enter to return to menu..."
         ;;
@@ -845,6 +850,10 @@ show_radio_options_menu() {
           '.model' "578 w/ BT-01 Emu (Digirig Mob)" \
           '.rigctrl.ptt' "RIG" \
           '.rigctrl.conf' "commode=1"
+        if [[ -f "${PAT_AX25_TEMPLATE}" ]]; then
+          sudo jq '.ax25.rig = "et-rig"' "${PAT_AX25_TEMPLATE}" > /tmp/pat-template.tmp && sudo mv /tmp/pat-template.tmp "${PAT_AX25_TEMPLATE}"
+          echo -e "${GREEN}✓ Pat AX.25 QSY enabled in template (et-rig)${NC}"
+        fi
         echo
         read -r -p "Press Enter to return to menu..."
         ;;
