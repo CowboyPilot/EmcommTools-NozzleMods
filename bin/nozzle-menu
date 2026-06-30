@@ -371,6 +371,17 @@ show_mercury_info() {
 # AIOC DireWolf Functions
 ################################################################################
 
+check_aioc() {
+  if ! command -v aioc-direwolf &>/dev/null; then
+    echo -e "${RED}ERROR: aioc-direwolf command not found${NC}"
+    echo -e "${YELLOW}Please install AIOC support first from Install Options menu${NC}"
+    echo
+    read -r -p "Press Enter to return to menu..."
+    return 1
+  fi
+  return 0
+}
+
 launch_aioc_mode() {
   local mode="$1"
   local mode_name="$2"
@@ -381,13 +392,7 @@ launch_aioc_mode() {
   echo -e "${GREEN}================================================================${NC}"
   echo
 
-  if ! command -v aioc-direwolf &>/dev/null; then
-    echo -e "${RED}ERROR: aioc-direwolf command not found${NC}"
-    echo -e "${YELLOW}Please install AIOC support first from Install Options menu${NC}"
-    echo
-    read -r -p "Press Enter to return to menu..."
-    return 1
-  fi
+  check_aioc || return 1
 
   echo -e "${BLUE}Starting AIOC DireWolf in ${mode_name} mode...${NC}"
   echo
@@ -400,6 +405,100 @@ launch_aioc_mode() {
   echo -e "${GREEN}================================================================${NC}"
   echo
   read -r -p "Press Enter to return to menu..."
+}
+
+start_aioc_direwolf_background() {
+  echo -e "${BLUE}Starting AIOC DireWolf (1200 baud)...${NC}"
+  aioc-direwolf start aioc-simple &
+  DIREWOLF_PID=$!
+
+  local elapsed=0
+  while ! ss -tln 2>/dev/null | grep -q ":8001 "; do
+    sleep 2
+    elapsed=$((elapsed + 2))
+    if [ ${elapsed} -ge 15 ]; then
+      echo -e "${RED}ERROR: DireWolf failed to start (KISS port 8001 not listening)${NC}"
+      kill ${DIREWOLF_PID} 2>/dev/null
+      return 1
+    fi
+  done
+  echo -e "${GREEN}✓ DireWolf running (PID ${DIREWOLF_PID})${NC}"
+}
+
+launch_aioc_app_mode() {
+  local mode_name="$1"
+  local app_cmd="$2"
+
+  clear
+  echo -e "${GREEN}================================================================${NC}"
+  echo -e "${GREEN}           AIOC - ${mode_name}${NC}"
+  echo -e "${GREEN}================================================================${NC}"
+  echo
+
+  check_aioc || return 1
+
+  start_aioc_direwolf_background || {
+    read -r -p "Press Enter to return to menu..."
+    return 1
+  }
+
+  echo
+  echo -e "${BLUE}Starting ${mode_name}...${NC}"
+  echo
+
+  ${app_cmd}
+
+  echo
+  echo -e "${YELLOW}Application exited. Stopping DireWolf...${NC}"
+  pkill -u "$USER" -f "direwolf" 2>/dev/null || true
+  echo -e "${GREEN}Done.${NC}"
+  echo
+  read -r -p "Press Enter to return to menu..."
+}
+
+launch_aioc_winlink_packet() {
+  clear
+  echo -e "${GREEN}================================================================${NC}"
+  echo -e "${GREEN}           AIOC - Winlink Packet${NC}"
+  echo -e "${GREEN}================================================================${NC}"
+  echo
+
+  check_aioc || return 1
+
+  start_aioc_direwolf_background || {
+    read -r -p "Press Enter to return to menu..."
+    return 1
+  }
+
+  echo
+  echo -e "${BLUE}Starting Pat Winlink in packet mode...${NC}"
+  et-winlink start-packet &
+  sleep 3
+
+  local pat_url="http://localhost:8080"
+  echo -e "${GREEN}Opening browser to ${pat_url}${NC}"
+  if command -v xdg-open &>/dev/null; then
+    xdg-open "${pat_url}" &>/dev/null &
+  elif command -v firefox &>/dev/null; then
+    firefox "${pat_url}" &>/dev/null &
+  elif command -v chromium-browser &>/dev/null; then
+    chromium-browser "${pat_url}" &>/dev/null &
+  else
+    echo -e "${YELLOW}Could not detect browser. Please open: ${pat_url}${NC}"
+  fi
+
+  echo
+  echo -e "${GREEN}================================================================${NC}"
+  echo -e "${GREEN}  Winlink Packet running on AIOC${NC}"
+  echo -e "${GREEN}================================================================${NC}"
+  echo -e "${BLUE}  Pat web interface: ${pat_url}${NC}"
+  echo
+  read -r -p "Press Enter to stop and return to menu..."
+
+  pkill -f "pat http" 2>/dev/null || true
+  pkill -u "$USER" -f "direwolf" 2>/dev/null || true
+  echo -e "${GREEN}Done.${NC}"
+  sleep 1
 }
 
 ################################################################################
@@ -597,14 +696,23 @@ show_aioc_menu() {
     echo -e "${GREEN}           AIOC Options${NC}"
     echo -e "${GREEN}================================================================${NC}"
     echo ""
-    echo "  1) Simple TNC (APRS, ChatterVox, Packet, BBS, etc)"
+    echo "DireWolf Only:"
+    echo ""
+    echo "  1) Simple TNC (start DireWolf only)"
     echo "  2) Packet Digipeater"
     echo "  3) APRS Digipeater"
     echo ""
-    echo -e "${BLUE}After selecting an AIOC mode, open a new window with et-mode to${NC}"
-    echo -e "${BLUE}select your application. Use alsamixer to adjust input and${NC}"
-    echo -e "${BLUE}output volumes.${NC}"
-    echo -e "${RED}Leave the window open until you are done with Direwolf then Ctl-C to close${NC}"
+    echo "Applications (starts DireWolf + app):"
+    echo ""
+    echo "  4) APRS Client (YAAC)"
+    echo "  5) BBS Client (Paracon)"
+    echo "  6) BBS Client (QtTermTCP)"
+    echo "  7) BBS Server (LinBPQ)"
+    echo "  8) Chat (chattervox)"
+    echo "  9) Winlink Packet"
+    echo ""
+    echo -e "${BLUE}DireWolf-only modes: use alsamixer to adjust volumes.${NC}"
+    echo -e "${RED}Leave the window open until you are done then Ctrl-C to close.${NC}"
     echo ""
     echo "  B) Back to Main Menu"
     echo ""
@@ -622,6 +730,24 @@ show_aioc_menu() {
         ;;
       3)
         launch_aioc_mode "aioc-aprs" "APRS Digipeater"
+        ;;
+      4)
+        launch_aioc_app_mode "APRS Client (YAAC)" "et-yaac start"
+        ;;
+      5)
+        launch_aioc_app_mode "BBS Client (Paracon)" "et-paracon start"
+        ;;
+      6)
+        launch_aioc_app_mode "BBS Client (QtTermTCP)" "et-qttermtcp start"
+        ;;
+      7)
+        launch_aioc_app_mode "BBS Server (LinBPQ)" "et-bbs-server start"
+        ;;
+      8)
+        launch_aioc_app_mode "Chat (chattervox)" "et-chattervox start"
+        ;;
+      9)
+        launch_aioc_winlink_packet
         ;;
       B)
         return
