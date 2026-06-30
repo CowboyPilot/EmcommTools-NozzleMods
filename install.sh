@@ -274,7 +274,7 @@ install_desktop_shortcuts() {
   fi
 
   # Install .desktop files
-  for desktop_file in direwolf-log-viewer ardop-log-viewer et-radio et-mode nozzle-menu; do
+  for desktop_file in direwolf-log-viewer ardop-log-viewer et-radio et-mode et-kill-all nozzle-menu; do
     local src="${NOZZLE_DIR}/bin/${desktop_file}.desktop"
     if [ -f "${src}" ]; then
       cp "${src}" "${desktop_dir}/${desktop_file}.desktop" 2>/dev/null && \
