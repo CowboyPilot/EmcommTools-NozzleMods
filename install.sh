@@ -326,30 +326,6 @@ show_next_steps() {
   echo
 }
 
-patch_et_common() {
-  print_header "Patching et-common for PipeWire compatibility"
-
-  local et_common="${ETC_BIN_DIR}/et-common"
-  if [ ! -f "${et_common}" ]; then
-    print_warning "et-common not found at ${et_common}, skipping patch"
-    return 0
-  fi
-
-  if grep -q 'XDG_RUNTIME_DIR' "${et_common}"; then
-    print_success "et-common already patched for PipeWire"
-    return 0
-  fi
-
-  print_info "Adding XDG_RUNTIME_DIR export for PipeWire ALSA compatibility..."
-  sudo sed -i '/^# Standardized device paths/i # Ensure PipeWire session context for ALSA commands\nexport XDG_RUNTIME_DIR="/run/user/$(id -u)"\n' "${et_common}"
-
-  if grep -q 'XDG_RUNTIME_DIR' "${et_common}"; then
-    print_success "et-common patched successfully"
-  else
-    print_warning "et-common patch may have failed — verify manually"
-  fi
-}
-
 ################################################################################
 # Main Installation Flow
 ################################################################################
@@ -395,10 +371,6 @@ main() {
   # Install desktop shortcuts
   echo
   install_desktop_shortcuts
-
-  # Patch et-common for PipeWire audio compatibility
-  echo
-  patch_et_common
 
   # Show next steps
   echo
