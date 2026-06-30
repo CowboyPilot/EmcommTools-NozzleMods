@@ -379,6 +379,25 @@ install_anytone578() {
   fi
 }
 
+install_hamlib_anytone() {
+  clear
+  echo -e "${GREEN}================================================================${NC}"
+  echo -e "${GREEN}           Custom Hamlib for Anytone 578${NC}"
+  echo -e "${GREEN}================================================================${NC}"
+  echo
+
+  if [[ -f "${NOZZLE_DIR}/radio-tools/anytone-578/install_hamlib_anytone.sh" ]]; then
+    cd "${NOZZLE_DIR}/radio-tools/anytone-578"
+    bash install_hamlib_anytone.sh
+    echo
+    read -r -p "Press Enter to return to menu..."
+  else
+    echo -e "${RED}ERROR: Hamlib installer not found at ${NOZZLE_DIR}/radio-tools/anytone-578/install_hamlib_anytone.sh${NC}"
+    echo
+    read -r -p "Press Enter to return to menu..."
+  fi
+}
+
 install_aioc() {
   clear
   echo -e "${GREEN}================================================================${NC}"
@@ -519,7 +538,8 @@ show_radio_menu() {
     echo "  1) Configure Xiegu G90 DigiRig PTT"
     echo "  2) Install Yaesu FT-710 Support"
     echo "  3) Install Anytone 578 Support"
-    echo "  4) Install AIOC Support"
+    echo "  4) Install Custom Hamlib (Anytone 578 driver)"
+    echo "  5) Install AIOC Support"
     echo ""
     echo "  B) Back to Main Menu"
     echo ""
@@ -539,6 +559,9 @@ show_radio_menu() {
         install_anytone578
         ;;
       4)
+        install_hamlib_anytone
+        ;;
+      5)
         install_aioc
         ;;
       B)

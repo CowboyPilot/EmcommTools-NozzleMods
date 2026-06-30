@@ -36,6 +36,7 @@ NozzleMods/
 │   │   └── udev-tester.patch          # System patches
 │   ├── anytone-578/
 │   │   ├── install_anytone578.sh      # Install Anytone 578 support
+│   │   ├── install_hamlib_anytone.sh  # Build/install custom Hamlib
 │   │   ├── anytone-578.json           # Radio configuration
 │   │   ├── anytone-578.sh             # Audio script
 │   │   └── udev-tester.patch          # System patches
@@ -119,7 +120,8 @@ Perfect for digital modes, APRS, and packet radio with any K1-style connector ra
 1. **Xiegu G90 DigiRig PTT** - Configure PTT mode (CAT or RTS)
 2. **Yaesu FT-710 Support** - Full installation with udev rules
 3. **Anytone 578 Support** - Install with Digirig Mobile integration
-4. **AIOC Support** - Install AIOC with DireWolf configurations
+4. **Custom Hamlib (Anytone 578)** - Build and install Hamlib fork with AT-D578UVIII driver
+5. **AIOC Support** - Install AIOC with DireWolf configurations
 
 ---
 
@@ -277,6 +279,46 @@ cd ~/NozzleMods/radio-tools/anytone-578
 **Backup Location:**
 ```bash
 ~/.anytone578-backup/udev-tester.sh.backup
+```
+
+---
+
+#### Custom Hamlib (Anytone 578 Driver)
+
+The stock Hamlib does not include a driver for the AnyTone AT-D578UVIII. This option builds and installs a custom Hamlib fork that adds full support.
+
+```bash
+cd ~/NozzleMods/radio-tools/anytone-578
+./install_hamlib_anytone.sh
+```
+
+**What it does:**
+* Clones the custom Hamlib fork from GitHub
+* Builds from source with the AT-D578UVIII backend
+* Installs to `/usr/local` (replaces system Hamlib)
+* Backs up existing Hamlib libraries for restore
+
+**Driver features:**
+* **Default mode** (`commode=0`): PTT only, no radio display lockout
+* **COM mode** (`commode=1`): PTT + frequency/VFO/clock control via BT-01 protocol
+
+**Usage after install:**
+```bash
+# PTT only (default, no radio lockout)
+rigctl -m 37001 -s 115200 -r /dev/et-cat
+
+# Full control (freq/vfo/clock, locks radio display)
+rigctl -m 37001 -C commode=1 -s 115200 -r /dev/et-cat
+
+# Verify driver is installed
+rigctl -l | grep -i anytone
+```
+
+**Rerun to update:** The build directory is kept at `~/hamlib-anytone-build`. Rerunning the script pulls the latest source and rebuilds.
+
+**Backup Location:**
+```bash
+~/.hamlib-backup/
 ```
 
 ---
