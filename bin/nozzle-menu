@@ -291,6 +291,7 @@ start_vara_fm() {
 ################################################################################
 
 MERCURY_INI="${HOME}/mercury.ini"
+MERCURY_BUILD_DIR="${HOME}/mercury-build"
 
 # Patch mercury.ini ARQ base port
 patch_mercury_ini_port() {
@@ -329,9 +330,17 @@ start_mercury() {
     return 1
   fi
 
+  if [[ ! -d "${MERCURY_BUILD_DIR}" ]]; then
+    echo -e "${RED}ERROR: Mercury build directory not found at ${MERCURY_BUILD_DIR}${NC}"
+    echo -e "${YELLOW}Please install Mercury first from Install Options menu${NC}"
+    return 1
+  fi
+
   echo -e "${GREEN}>>> Starting Mercury modem...${NC}"
+  cd "${MERCURY_BUILD_DIR}"
   mercury -C "${MERCURY_INI}" &>/dev/null &
   sleep 2
+  cd "${HOME}"
 }
 
 show_mercury_info() {
