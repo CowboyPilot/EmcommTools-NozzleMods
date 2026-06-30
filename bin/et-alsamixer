@@ -19,4 +19,7 @@ fi
 
 AUDIO_CARD=$(echo "$APLAY_OUT" | cut -d":" -f1 | awk '{print $2}')
 
+# Mute Mic Playback (loopback) to prevent audio feedback
+amixer -q -c "${AUDIO_CARD}" sset Mic Playback 0 mute 2>/dev/null || true
+
 exec alsamixer -c "${AUDIO_CARD}" -V all
