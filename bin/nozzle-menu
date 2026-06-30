@@ -371,6 +371,19 @@ show_mercury_info() {
 # AIOC DireWolf Functions
 ################################################################################
 
+set_aioc_audio_levels() {
+  local card
+  local aplay_out
+  aplay_out=$(arecord -l 2>/dev/null | grep ET_AUDIO) || return 0
+  card=$(echo "$aplay_out" | cut -d":" -f1 | awk '{print $2}')
+
+  echo -e "${BLUE}Setting AIOC audio levels to 25%...${NC}"
+  amixer -q -c "${card}" sset 'AIOC Audio In' 25% 2>/dev/null || true
+  amixer -q -c "${card}" sset 'AIOC Audio In 1' 25% 2>/dev/null || true
+  amixer -q -c "${card}" sset 'AIOC Audio Out Vol' 25% 2>/dev/null || true
+  echo -e "${GREEN}✓ AIOC audio levels set${NC}"
+}
+
 check_aioc() {
   if ! command -v aioc-direwolf &>/dev/null; then
     echo -e "${RED}ERROR: aioc-direwolf command not found${NC}"
@@ -394,6 +407,8 @@ launch_aioc_mode() {
 
   check_aioc || return 1
 
+  set_aioc_audio_levels
+
   echo -e "${BLUE}Starting AIOC DireWolf in ${mode_name} mode...${NC}"
   echo
 
@@ -408,6 +423,8 @@ launch_aioc_mode() {
 }
 
 start_aioc_direwolf_background() {
+  set_aioc_audio_levels
+
   echo -e "${BLUE}Starting AIOC DireWolf (1200 baud)...${NC}"
   systemd-cat -t aioc-direwolf aioc-direwolf start aioc-simple &
   DIREWOLF_PID=$!
