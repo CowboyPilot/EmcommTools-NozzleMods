@@ -66,7 +66,7 @@ echo ""
 # Check and install dependencies
 echo "Checking build dependencies..."
 MISSING_PKGS=()
-for pkg in build-essential pkg-config libasound2-dev libpulse-dev libhamlib-dev make git; do
+for pkg in build-essential pkg-config libasound2-dev libpulse-dev make git; do
     if ! dpkg -s "${pkg}" >/dev/null 2>&1; then
         MISSING_PKGS+=("${pkg}")
     fi
@@ -81,7 +81,7 @@ if [ ${#MISSING_PKGS[@]} -gt 0 ]; then
     if [[ "${install_deps}" =~ ^[Yy]$ ]]; then
         echo "Installing dependencies..."
         sudo apt-get update
-        sudo apt-get install -y build-essential pkg-config libasound2-dev libpulse-dev libhamlib-dev make git
+        sudo apt-get install -y build-essential pkg-config libasound2-dev libpulse-dev make git
         echo -e "${GREEN}✓ Dependencies installed${NC}"
     else
         echo -e "${RED}Cannot proceed without dependencies.${NC}"
@@ -107,30 +107,23 @@ else
     echo -e "${GREEN}✓ Source cloned${NC}"
 fi
 
-# Disable internal Hamlib in Makefile
+# Build with internal Hamlib disabled via command-line override.
+# The Makefile auto-detects Hamlib via pkg-config, so patching the file
+# is not enough — a make variable override takes precedence over all
+# Makefile assignments.
 echo ""
-echo "Disabling internal Hamlib (HAVE_HAMLIB=0)..."
-if grep -q "^HAVE_HAMLIB" Makefile; then
-    sed -i 's/^HAVE_HAMLIB.*/HAVE_HAMLIB = 0/' Makefile
-    echo -e "${GREEN}✓ Internal Hamlib disabled${NC}"
-else
-    echo -e "${YELLOW}⚠ HAVE_HAMLIB not found in Makefile, may already be configured${NC}"
-fi
-
-# Build
-echo ""
-echo -e "${BLUE}Building Mercury (this may take a few minutes)...${NC}"
+echo -e "${BLUE}Building Mercury with HAVE_HAMLIB=0 (this may take a few minutes)...${NC}"
 echo ""
 
 NPROC=$(nproc 2>/dev/null || echo 2)
-make -j"${NPROC}"
+make -j"${NPROC}" HAVE_HAMLIB=0
 echo ""
 echo -e "${GREEN}✓ Build complete${NC}"
 
 # Install
 echo ""
 echo "Installing..."
-sudo make install
+sudo make install HAVE_HAMLIB=0
 echo -e "${GREEN}✓ Installation complete${NC}"
 
 # Install mercury.ini
