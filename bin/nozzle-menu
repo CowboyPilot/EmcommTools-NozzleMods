@@ -15,6 +15,8 @@
 
 set -euo pipefail
 
+NOZZLE_VERSION="2.1.0"
+
 # Paths
 NOZZLE_DIR="${HOME}/NozzleMods"
 ET_HOME="/opt/emcomm-tools"
@@ -956,6 +958,70 @@ show_system_menu() {
   done
 }
 
+VERSION_CACHE="${HOME}/.cache/nozzlemods/version_check"
+
+compare_versions() {
+  local remote_version="$1"
+
+  local l_maj l_min l_patch r_maj r_min r_patch
+  IFS='.' read -r l_maj l_min l_patch <<< "${NOZZLE_VERSION}"
+  IFS='.' read -r r_maj r_min r_patch <<< "${remote_version}"
+
+  if [[ "${l_maj}" -ne "${r_maj}" ]] || \
+     [[ $((r_min - l_min)) -gt 1 ]] || \
+     [[ "${l_min}" -eq "${r_min}" && $((r_patch - l_patch)) -gt 1 ]]; then
+    VERSION_COLOR="${RED}"
+    VERSION_STATUS="outdated"
+    SHOW_UPDATE=true
+  elif [[ $((r_min - l_min)) -eq 1 ]]; then
+    VERSION_COLOR="${YELLOW}"
+    VERSION_STATUS="update available"
+    SHOW_UPDATE=true
+  elif [[ "${l_min}" -eq "${r_min}" && "${r_patch}" -gt "${l_patch}" ]]; then
+    VERSION_COLOR="${GREEN}"
+    VERSION_STATUS="current"
+  else
+    VERSION_COLOR="${GREEN}"
+    VERSION_STATUS="current"
+  fi
+}
+
+check_version() {
+  VERSION_COLOR=""
+  VERSION_STATUS="unknown"
+  SHOW_UPDATE=false
+
+  local today
+  today=$(date +%Y-%m-%d)
+
+  if [[ -f "${VERSION_CACHE}" ]]; then
+    local cached_date cached_remote
+    cached_date=$(sed -n '1p' "${VERSION_CACHE}")
+    cached_remote=$(sed -n '2p' "${VERSION_CACHE}")
+    if [[ "${cached_date}" == "${today}" && -n "${cached_remote}" ]]; then
+      compare_versions "${cached_remote}"
+      return
+    fi
+  fi
+
+  local remote_version
+  remote_version=$(curl -fsSL --connect-timeout 3 --max-time 5 \
+    "https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/bin/nozzle-menu" 2>/dev/null \
+    | grep '^NOZZLE_VERSION=' | head -1 | cut -d'"' -f2) || true
+
+  if [[ -z "${remote_version}" ]]; then
+    VERSION_COLOR="${NC}"
+    return
+  fi
+
+  mkdir -p "$(dirname "${VERSION_CACHE}")"
+  printf '%s\n%s\n' "${today}" "${remote_version}" > "${VERSION_CACHE}"
+
+  compare_versions "${remote_version}"
+}
+
+check_version
+
 show_menu() {
   clear
   echo -e "${GREEN}================================================================${NC}"
@@ -980,10 +1046,15 @@ show_menu() {
   echo "  I) Install Options"
   echo "  R) Radio Options"
   echo "  S) System Tools"
+  if [[ "${SHOW_UPDATE}" == true ]]; then
+    echo "  U) Update NozzleMods"
+  fi
   echo ""
   echo -e "${YELLOW}════════════════════════════════════════════════════════════${NC}"
   echo ""
   echo "  Q) Quit"
+  echo ""
+  echo -e "${VERSION_COLOR}  NozzleMods v${NOZZLE_VERSION}${NC}"
   echo ""
   echo -n "Enter choice: "
 }
@@ -1209,6 +1280,15 @@ main() {
 
       S)
         show_system_menu
+        ;;
+
+      U)
+        if [[ "${SHOW_UPDATE}" == true ]]; then
+          update_nozzle_tools
+        else
+          echo -e "${RED}Invalid choice${NC}"
+          sleep 2
+        fi
         ;;
 
       Q)
