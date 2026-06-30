@@ -1,0 +1,39 @@
+#!/bin/bash
+# Real-time DireWolf log viewer
+# Shows the last 100 lines and follows new output
+
+ET_LOG_DIR="${HOME}/.local/share/emcomm-tools"
+LOG_FILE="${ET_LOG_DIR}/$(date +%Y-%m-%d).log"
+
+echo "════════════════════════════════════════════════════════════"
+echo "  DireWolf Log Viewer"
+echo "════════════════════════════════════════════════════════════"
+echo ""
+
+if [ ! -d "${ET_LOG_DIR}" ]; then
+  echo "Log directory not found: ${ET_LOG_DIR}"
+  echo "DireWolf has not been run yet."
+  echo ""
+  read -r -p "Press Enter to exit..."
+  exit 1
+fi
+
+if [ ! -f "${LOG_FILE}" ]; then
+  echo "No log file for today: ${LOG_FILE}"
+  echo ""
+  echo "Waiting for DireWolf to start logging..."
+  echo "(Press Ctrl-C to exit)"
+  echo ""
+
+  while [ ! -f "${LOG_FILE}" ]; do
+    LOG_FILE="${ET_LOG_DIR}/$(date +%Y-%m-%d).log"
+    sleep 2
+  done
+fi
+
+echo "Watching: ${LOG_FILE}"
+echo "Press Ctrl-C to exit"
+echo "════════════════════════════════════════════════════════════"
+echo ""
+
+tail -n 100 -F "${LOG_FILE}"

@@ -251,6 +251,40 @@ install_nozzle_menu() {
   print_success "nozzle-menu installed successfully"
 }
 
+install_direwolf_log_viewer() {
+  print_header "Installing DireWolf Log Viewer"
+
+  local viewer_src="${NOZZLE_DIR}/bin/direwolf-log-viewer"
+  local desktop_src="${NOZZLE_DIR}/bin/direwolf-log-viewer.desktop"
+  local desktop_dest="${HOME}/Desktop/direwolf-log-viewer.desktop"
+  local apps_dest="/usr/share/applications/direwolf-log-viewer.desktop"
+
+  if [ ! -f "${viewer_src}" ]; then
+    print_warning "direwolf-log-viewer not found, skipping"
+    return 0
+  fi
+
+  # Install the script to /opt/emcomm-tools/bin
+  if [ -d "${ETC_BIN_DIR}" ]; then
+    if sudo cp "${viewer_src}" "${ETC_BIN_DIR}/" 2>/dev/null && \
+       sudo chmod +x "${ETC_BIN_DIR}/direwolf-log-viewer" 2>/dev/null; then
+      print_success "Installed direwolf-log-viewer to ${ETC_BIN_DIR}"
+    else
+      print_warning "Could not install direwolf-log-viewer to ${ETC_BIN_DIR}"
+    fi
+  fi
+
+  # Install .desktop file to Desktop and applications
+  if [ -f "${desktop_src}" ]; then
+    cp "${desktop_src}" "${desktop_dest}" 2>/dev/null && \
+      chmod +x "${desktop_dest}" 2>/dev/null && \
+      print_success "Desktop shortcut created"
+
+    sudo cp "${desktop_src}" "${apps_dest}" 2>/dev/null && \
+      print_success "Application menu entry created"
+  fi
+}
+
 ################################################################################
 # Post-Installation Instructions
 ################################################################################
@@ -332,7 +366,11 @@ main() {
     print_warning "nozzle-menu installation failed, but other tools are installed"
     echo "Continuing..."
   }
-  
+
+  # Install DireWolf log viewer
+  echo
+  install_direwolf_log_viewer
+
   # Show next steps
   echo
   show_next_steps
