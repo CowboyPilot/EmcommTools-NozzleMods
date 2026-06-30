@@ -378,11 +378,10 @@ set_aioc_audio_levels() {
   card=$(echo "$aplay_out" | cut -d":" -f1 | awk '{print $2}')
 
   echo -e "${BLUE}Setting AIOC audio levels to 25%...${NC}"
-  local target=$(( 24576 * 25 / 100 ))
-  amixer -q -c "${card}" cset name='AIOC Audio In Capture Volume',index=0 ${target} 2>/dev/null || true
-  amixer -q -c "${card}" cset name='AIOC Audio In Capture Volume',index=1 ${target} 2>/dev/null || true
-  amixer -q -c "${card}" cset name='AIOC Audio Out Volume Playback Volume',index=0 ${target} 2>/dev/null || true
-  amixer -q -c "${card}" cset name='AIOC Audio Out Volume Playback Volume',index=1 ${target} 2>/dev/null || true
+  amixer -q -c "${card}" sset 'AIOC Audio In',0 25% 2>/dev/null || true
+  amixer -q -c "${card}" sset 'AIOC Audio In',1 25% 2>/dev/null || true
+  amixer -q -c "${card}" sset 'AIOC Audio Out Volume',0 25% 2>/dev/null || true
+  amixer -q -c "${card}" sset 'AIOC Audio Out Volume',1 25% 2>/dev/null || true
   echo -e "${GREEN}✓ AIOC audio levels set${NC}"
 }
 
