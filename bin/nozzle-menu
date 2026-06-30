@@ -823,6 +823,7 @@ show_radio_options_menu() {
         set_radio_config "${G90_JSON}" "G90 set to RTS PTT (DigiRig default)" \
           '.model' "G90 (DigiRig)" \
           '.rigctrl.ptt' "RTS"
+        sudo systemctl restart rigctld 2>/dev/null && echo -e "${GREEN}✓ rigctld restarted${NC}" || true
         echo
         read -r -p "Press Enter to return to menu..."
         ;;
@@ -830,6 +831,7 @@ show_radio_options_menu() {
         set_radio_config "${G90_JSON}" "G90 set to CAT PTT" \
           '.model' "G90 (DR-CAT)" \
           '.rigctrl.ptt' "RIG --set-conf=rts_state=OFF,stop_bits=2"
+        sudo systemctl restart rigctld 2>/dev/null && echo -e "${GREEN}✓ rigctld restarted${NC}" || true
         echo
         read -r -p "Press Enter to return to menu..."
         ;;
@@ -842,6 +844,7 @@ show_radio_options_menu() {
           sudo jq 'del(.ax25.rig)' "${PAT_AX25_TEMPLATE}" > /tmp/pat-template.tmp && sudo mv /tmp/pat-template.tmp "${PAT_AX25_TEMPLATE}"
           echo -e "${GREEN}✓ Pat AX.25 QSY disabled in template${NC}"
         fi
+        sudo systemctl restart rigctld 2>/dev/null && echo -e "${GREEN}✓ rigctld restarted${NC}" || true
         echo
         read -r -p "Press Enter to return to menu..."
         ;;
@@ -854,6 +857,7 @@ show_radio_options_menu() {
           sudo jq '.ax25.rig = "et-rig"' "${PAT_AX25_TEMPLATE}" > /tmp/pat-template.tmp && sudo mv /tmp/pat-template.tmp "${PAT_AX25_TEMPLATE}"
           echo -e "${GREEN}✓ Pat AX.25 QSY enabled in template (et-rig)${NC}"
         fi
+        sudo systemctl restart rigctld 2>/dev/null && echo -e "${GREEN}✓ rigctld restarted${NC}" || true
         echo
         read -r -p "Press Enter to return to menu..."
         ;;
