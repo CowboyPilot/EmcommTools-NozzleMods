@@ -15,7 +15,7 @@
 
 set -euo pipefail
 
-NOZZLE_VERSION="2.1.0"
+NOZZLE_VERSION="2.2.0"
 
 # Paths
 NOZZLE_DIR="${HOME}/NozzleMods"

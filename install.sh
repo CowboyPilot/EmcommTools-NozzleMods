@@ -273,13 +273,26 @@ install_desktop_shortcuts() {
     done
   fi
 
+  # Place new desktop icons starting from the top-left corner (GNOME / Desktop Icons NG)
+  if command -v gsettings >/dev/null 2>&1; then
+    if gsettings set org.gnome.shell.extensions.ding start-corner 'top-left' 2>/dev/null; then
+      print_success "Desktop icons will arrange from the top-left"
+    fi
+  fi
+
   # Install .desktop files
   for desktop_file in direwolf-log-viewer ardop-log-viewer et-alsamixer et-radio et-mode et-kill-all nozzle-menu; do
     local src="${NOZZLE_DIR}/bin/${desktop_file}.desktop"
     if [ -f "${src}" ]; then
-      cp "${src}" "${desktop_dir}/${desktop_file}.desktop" 2>/dev/null && \
-        chmod +x "${desktop_dir}/${desktop_file}.desktop" 2>/dev/null && \
+      local dest="${desktop_dir}/${desktop_file}.desktop"
+      if cp "${src}" "${dest}" 2>/dev/null && chmod +x "${dest}" 2>/dev/null; then
+        # Mark as trusted so it launches without the "Allow Launching" prompt
+        gio set "${dest}" metadata::trusted true 2>/dev/null || \
+          gio set "${dest}" metadata::trusted yes 2>/dev/null || true
         print_success "Desktop shortcut: ${desktop_file}"
+      else
+        print_warning "Could not create desktop shortcut: ${desktop_file}"
+      fi
 
       sudo cp "${src}" "${apps_dir}/${desktop_file}.desktop" 2>/dev/null
     fi
