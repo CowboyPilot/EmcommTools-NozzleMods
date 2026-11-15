@@ -728,17 +728,44 @@ preflight_checks() {
 ################################################################################
 
 clone_repository() {
-  print_header "Cloning Repository"
+  print_header "Fetching Repository"
 
-  print_info "Cloning from ${REPO_URL}..."
-  print_info "Branch: ${REPO_BRANCH}"
-
-  if git clone --depth 1 --branch "${REPO_BRANCH}" "${REPO_URL}" "${TEMP_CLONE_DIR}"; then
-    print_success "Repository cloned successfully"
-    return 0
+  if command -v git >/dev/null 2>&1; then
+    print_info "Cloning from ${REPO_URL}..."
+    print_info "Branch: ${REPO_BRANCH}"
+    if git clone --depth 1 --branch "${REPO_BRANCH}" "${REPO_URL}" "${TEMP_CLONE_DIR}"; then
+      print_success "Repository cloned successfully"
+      return 0
+    else
+      print_error "Failed to clone repository"
+      return 1
+    fi
   else
-    print_error "Failed to clone repository"
-    return 1
+    # No git — download tarball (works in Cubic chroot)
+    local tarball_url="https://github.com/CowboyPilot/EmcommTools-NozzleMods/archive/refs/heads/${REPO_BRANCH}.tar.gz"
+    local tarball_path="/tmp/nozzlemods-archive.tar.gz"
+    print_info "Downloading tarball (git not available)..."
+
+    local dl_ok=false
+    if command -v wget >/dev/null 2>&1; then
+      wget -q -O "${tarball_path}" "${tarball_url}" && dl_ok=true
+    elif command -v curl >/dev/null 2>&1; then
+      curl -fSL -o "${tarball_path}" "${tarball_url}" && dl_ok=true
+    else
+      print_error "Neither git, wget, nor curl found"
+      return 1
+    fi
+
+    if [[ "${dl_ok}" != true ]]; then
+      print_error "Failed to download repository tarball"
+      return 1
+    fi
+
+    mkdir -p "${TEMP_CLONE_DIR}"
+    tar xzf "${tarball_path}" --strip-components=1 -C "${TEMP_CLONE_DIR}"
+    rm -f "${tarball_path}"
+    print_success "Repository downloaded and extracted"
+    return 0
   fi
 }
 
