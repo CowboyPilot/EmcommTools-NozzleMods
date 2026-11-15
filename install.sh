@@ -14,6 +14,9 @@
 #   wget https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install.sh
 #   chmod +x install.sh
 #   ./install.sh
+#
+# Cubic ISO builder mode (auto-detected or forced):
+#   ./install.sh --cubic
 ################################################################################
 
 set -euo pipefail
@@ -31,8 +34,12 @@ NC='\033[0m' # No Color
 
 # Installation paths
 NOZZLE_DIR="${HOME}/NozzleMods"
-ETC_BIN_DIR="/opt/emcomm-tools/bin"
+ETC_HOME="/opt/emcomm-tools"
+ETC_BIN_DIR="${ETC_HOME}/bin"
 TEMP_CLONE_DIR="/tmp/NozzleMods_install_$$"
+
+# Cubic mode flag
+CUBIC_MODE=false
 
 ################################################################################
 # Helper Functions
@@ -81,14 +88,311 @@ cleanup_temp() {
 trap cleanup_temp EXIT
 
 ################################################################################
-# Pre-flight Checks
+# Cubic Detection
+################################################################################
+
+detect_cubic() {
+  # Cubic chroot: root user, no systemd as PID 1, ETC filesystem present
+  if [ "$EUID" -eq 0 ] && [ -d "${ETC_HOME}" ]; then
+    local pid1_comm=""
+    if [ -f /proc/1/comm ]; then
+      pid1_comm=$(cat /proc/1/comm 2>/dev/null || true)
+    fi
+    if [ "${pid1_comm}" != "systemd" ]; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
+################################################################################
+# Cubic ISO Builder Mode
+################################################################################
+
+cubic_show_selection_menu() {
+  # Selection state arrays — all off by default
+  local -a radio_sel=(0 0 0 0)
+  local -a desktop_sel=(0 0 0 0 0 0 0)
+
+  local radio_labels=(
+    "Xiegu G90 Mod"
+    "Yaesu FT-710 Support"
+    "Anytone 578 Support (includes custom Hamlib)"
+    "AIOC Support"
+  )
+
+  local desktop_labels=(
+    "ARDOP Log Viewer"
+    "Direwolf Log Viewer"
+    "AlsaMixer"
+    "ET Kill All"
+    "ET Mode"
+    "ET Radio"
+    "Nozzle Menu"
+  )
+
+  while true; do
+    clear
+    echo -e "${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}║                                                            ║${NC}"
+    echo -e "${GREEN}║          NozzleMods ISO Builder — Cubic Mode               ║${NC}"
+    echo -e "${GREEN}║                                                            ║${NC}"
+    echo -e "${GREEN}╚════════════════════════════════════════════════════════════╝${NC}"
+    echo
+    echo -e "${YELLOW}Toggle items with their number/letter, then press G to go.${NC}"
+    echo
+
+    echo -e "${BLUE}Radio Mods:${NC}"
+    echo
+    local i
+    for i in 0 1 2 3; do
+      local mark=" "
+      [[ "${radio_sel[$i]}" -eq 1 ]] && mark="X"
+      echo "  $((i+1))) [${mark}] ${radio_labels[$i]}"
+    done
+
+    echo
+    echo -e "${BLUE}Desktop Shortcuts:${NC}"
+    echo
+    local letters=(A B C D E F N)
+    for i in 0 1 2 3 4 5 6; do
+      local mark=" "
+      [[ "${desktop_sel[$i]}" -eq 1 ]] && mark="X"
+      echo "  ${letters[$i]}) [${mark}] ${desktop_labels[$i]}"
+    done
+
+    echo
+    echo -e "${YELLOW}────────────────────────────────────────────────────────────${NC}"
+    echo "  S) Select All"
+    echo "  X) Deselect All"
+    echo "  G) Go — Apply selected mods"
+    echo "  Q) Quit"
+    echo
+    echo -n "Enter choice: "
+
+    read -r choice
+    choice=$(echo "${choice}" | tr '[:lower:]' '[:upper:]')
+
+    case "${choice}" in
+      1) radio_sel[0]=$(( 1 - radio_sel[0] )) ;;
+      2) radio_sel[1]=$(( 1 - radio_sel[1] )) ;;
+      3) radio_sel[2]=$(( 1 - radio_sel[2] )) ;;
+      4) radio_sel[3]=$(( 1 - radio_sel[3] )) ;;
+      A) desktop_sel[0]=$(( 1 - desktop_sel[0] )) ;;
+      B) desktop_sel[1]=$(( 1 - desktop_sel[1] )) ;;
+      C) desktop_sel[2]=$(( 1 - desktop_sel[2] )) ;;
+      D) desktop_sel[3]=$(( 1 - desktop_sel[3] )) ;;
+      E) desktop_sel[4]=$(( 1 - desktop_sel[4] )) ;;
+      F) desktop_sel[5]=$(( 1 - desktop_sel[5] )) ;;
+      N) desktop_sel[6]=$(( 1 - desktop_sel[6] )) ;;
+      S)
+        for i in 0 1 2 3; do radio_sel[$i]=1; done
+        for i in 0 1 2 3 4 5 6; do desktop_sel[$i]=1; done
+        ;;
+      X)
+        for i in 0 1 2 3; do radio_sel[$i]=0; done
+        for i in 0 1 2 3 4 5 6; do desktop_sel[$i]=0; done
+        ;;
+      G)
+        # Pass selections to the apply function
+        cubic_apply_selections radio_sel desktop_sel
+        return
+        ;;
+      Q)
+        echo "Cancelled."
+        exit 0
+        ;;
+      *)
+        echo -e "${RED}Invalid choice${NC}"
+        sleep 1
+        ;;
+    esac
+  done
+}
+
+cubic_apply_selections() {
+  local -n _radio="$1"
+  local -n _desktop="$2"
+
+  local any_selected=false
+  for i in 0 1 2 3; do
+    [[ "${_radio[$i]}" -eq 1 ]] && any_selected=true
+  done
+  for i in 0 1 2 3 4 5 6; do
+    [[ "${_desktop[$i]}" -eq 1 ]] && any_selected=true
+  done
+
+  if [[ "${any_selected}" == false ]]; then
+    echo
+    print_warning "Nothing selected. Exiting."
+    exit 0
+  fi
+
+  echo
+  print_header "Applying NozzleMods to ISO"
+
+  # Clone repo to get the files
+  print_info "Fetching NozzleMods..."
+  if ! clone_repository; then
+    print_error "Failed to clone repository. Exiting."
+    exit 1
+  fi
+
+  local src="${TEMP_CLONE_DIR}"
+
+  # Always install nozzle-menu and bin scripts to the ISO
+  print_info "Installing nozzle-menu to ${ETC_BIN_DIR}..."
+  cp "${src}/bin/nozzle-menu" "${ETC_BIN_DIR}/"
+  chmod +x "${ETC_BIN_DIR}/nozzle-menu"
+  print_success "nozzle-menu installed"
+
+  # Install helper scripts that desktop shortcuts depend on
+  for helper in direwolf-log-viewer ardop-log-viewer et-alsamixer; do
+    if [ -f "${src}/bin/${helper}" ]; then
+      cp "${src}/bin/${helper}" "${ETC_BIN_DIR}/"
+      chmod +x "${ETC_BIN_DIR}/${helper}"
+    fi
+  done
+
+  # Install NozzleMods to /etc/skel so every new user gets them
+  local skel_nozzle="/etc/skel/NozzleMods"
+  print_info "Installing NozzleMods to ${skel_nozzle} (skeleton for new users)..."
+  rm -rf "${skel_nozzle}"
+  mkdir -p "${skel_nozzle}"
+  cp -r "${src}/bin" "${skel_nozzle}/"
+  cp -r "${src}/radio-tools" "${skel_nozzle}/"
+  cp -r "${src}/linux-tools" "${skel_nozzle}/"
+  [ -f "${src}/install.sh" ] && cp "${src}/install.sh" "${skel_nozzle}/"
+  find "${skel_nozzle}" -type f -name "*.sh" -exec chmod +x {} \;
+  chmod +x "${skel_nozzle}/bin/nozzle-menu" 2>/dev/null || true
+  print_success "NozzleMods installed to skeleton"
+
+  echo
+
+  # Radio mods
+  if [[ "${_radio[0]}" -eq 1 ]]; then
+    print_header "Applying Xiegu G90 Mod"
+    if [ -f "${src}/radio-tools/xiegu-g90/update-g90-config.sh" ]; then
+      bash "${src}/radio-tools/xiegu-g90/update-g90-config.sh" || \
+        print_warning "G90 config script returned non-zero (may need interactive input)"
+    else
+      print_error "G90 config script not found"
+    fi
+  fi
+
+  if [[ "${_radio[1]}" -eq 1 ]]; then
+    print_header "Applying Yaesu FT-710 Support"
+    if [ -f "${src}/radio-tools/yaesu-ft710/install_ft710.sh" ]; then
+      cd "${src}/radio-tools/yaesu-ft710"
+      bash install_ft710.sh || \
+        print_warning "FT-710 installer returned non-zero"
+      cd /
+    else
+      print_error "FT-710 installer not found"
+    fi
+  fi
+
+  if [[ "${_radio[2]}" -eq 1 ]]; then
+    print_header "Applying Anytone 578 Support"
+
+    # Build and install custom Hamlib first
+    if [ -f "${src}/radio-tools/anytone-578/install_hamlib_anytone.sh" ]; then
+      print_info "Building custom Hamlib with Anytone 578 driver..."
+      cd "${src}/radio-tools/anytone-578"
+      bash install_hamlib_anytone.sh || \
+        print_warning "Custom Hamlib build returned non-zero"
+      cd /
+    else
+      print_warning "Custom Hamlib installer not found, skipping"
+    fi
+
+    # Then install the Anytone 578 profile
+    if [ -f "${src}/radio-tools/anytone-578/install_anytone578.sh" ]; then
+      cd "${src}/radio-tools/anytone-578"
+      bash install_anytone578.sh || \
+        print_warning "Anytone 578 installer returned non-zero"
+      cd /
+    else
+      print_error "Anytone 578 installer not found"
+    fi
+  fi
+
+  if [[ "${_radio[3]}" -eq 1 ]]; then
+    print_header "Applying AIOC Support"
+    if [ -f "${src}/radio-tools/aioc/install_aioc.sh" ]; then
+      cd "${src}/radio-tools/aioc"
+      bash install_aioc.sh || \
+        print_warning "AIOC installer returned non-zero"
+      cd /
+    else
+      print_error "AIOC installer not found"
+    fi
+  fi
+
+  # Desktop shortcuts — install to /etc/skel/Desktop and /usr/share/applications
+  local desktop_files=(
+    "ardop-log-viewer"
+    "direwolf-log-viewer"
+    "et-alsamixer"
+    "et-kill-all"
+    "et-mode"
+    "et-radio"
+    "nozzle-menu"
+  )
+
+  local any_desktop=false
+  for i in 0 1 2 3 4 5 6; do
+    [[ "${_desktop[$i]}" -eq 1 ]] && any_desktop=true
+  done
+
+  if [[ "${any_desktop}" == true ]]; then
+    print_header "Installing Desktop Shortcuts"
+
+    local skel_desktop="/etc/skel/Desktop"
+    local apps_dir="/usr/share/applications"
+    mkdir -p "${skel_desktop}" "${apps_dir}"
+
+    for i in 0 1 2 3 4 5 6; do
+      if [[ "${_desktop[$i]}" -eq 1 ]]; then
+        local df="${desktop_files[$i]}"
+        local desktop_src="${src}/bin/${df}.desktop"
+        if [ -f "${desktop_src}" ]; then
+          cp "${desktop_src}" "${skel_desktop}/${df}.desktop"
+          chmod +x "${skel_desktop}/${df}.desktop"
+          cp "${desktop_src}" "${apps_dir}/${df}.desktop"
+          print_success "Desktop shortcut: ${df}"
+        else
+          print_warning "Desktop file not found: ${df}.desktop"
+        fi
+      fi
+    done
+  fi
+
+  echo
+  print_header "Cubic ISO Build Complete"
+  echo "Selected NozzleMods have been applied to the ISO filesystem."
+  echo
+  echo "Items installed to:"
+  echo "  • nozzle-menu and helpers → ${ETC_BIN_DIR}/"
+  echo "  • NozzleMods scripts     → /etc/skel/NozzleMods/"
+  echo "  • Desktop shortcuts      → /etc/skel/Desktop/"
+  echo "  • App entries            → /usr/share/applications/"
+  echo
+  echo "New users created from this ISO will have NozzleMods ready to use."
+  echo
+  echo -e "${GREEN}73!${NC}"
+  echo
+}
+
+################################################################################
+# Pre-flight Checks (normal install mode)
 ################################################################################
 
 preflight_checks() {
   print_header "Pre-flight Checks"
-  
+
   local missing_deps=0
-  
+
   # Check for required commands
   for cmd in git chmod; do
     if check_command "$cmd"; then
@@ -97,7 +401,7 @@ preflight_checks() {
       missing_deps=1
     fi
   done
-  
+
   if [ $missing_deps -eq 1 ]; then
     print_error "Missing required dependencies"
     echo
@@ -106,7 +410,7 @@ preflight_checks() {
     echo "  sudo apt install git coreutils"
     exit 1
   fi
-  
+
   # Check if running as root
   if [ "$EUID" -eq 0 ]; then
     print_error "Do NOT run this script as root"
@@ -115,7 +419,7 @@ preflight_checks() {
     echo "  ./install.sh"
     exit 1
   fi
-  
+
   # Verify we can access GitHub
   print_info "Checking GitHub connectivity..."
   if git ls-remote "${REPO_URL}" &>/dev/null; then
@@ -126,21 +430,21 @@ preflight_checks() {
     echo "Please check your internet connection and try again"
     exit 1
   fi
-  
+
   echo
   print_success "All pre-flight checks passed"
 }
 
 ################################################################################
-# Installation Functions
+# Installation Functions (normal install mode)
 ################################################################################
 
 clone_repository() {
   print_header "Cloning Repository"
-  
+
   print_info "Cloning from ${REPO_URL}..."
   print_info "Branch: ${REPO_BRANCH}"
-  
+
   if git clone --depth 1 --branch "${REPO_BRANCH}" "${REPO_URL}" "${TEMP_CLONE_DIR}"; then
     print_success "Repository cloned successfully"
     return 0
@@ -153,10 +457,10 @@ clone_repository() {
 backup_existing() {
   if [ -d "${NOZZLE_DIR}" ]; then
     print_header "Backing Up Existing Installation"
-    
+
     local backup_dir="${NOZZLE_DIR}.backup.$(date +%Y%m%d_%H%M%S)"
     print_info "Creating backup at ${backup_dir}..."
-    
+
     if mv "${NOZZLE_DIR}" "${backup_dir}"; then
       print_success "Existing installation backed up"
       print_info "Old version saved to: ${backup_dir}"
@@ -169,47 +473,47 @@ backup_existing() {
 
 install_files() {
   print_header "Installing Files"
-  
+
   # Create main directory
   print_info "Creating ${NOZZLE_DIR}..."
   mkdir -p "${NOZZLE_DIR}"
-  
+
   # Copy all directories from the cloned repo
   print_info "Copying bin..."
   cp -r "${TEMP_CLONE_DIR}/bin" "${NOZZLE_DIR}/"
 
   print_info "Copying radio-tools..."
   cp -r "${TEMP_CLONE_DIR}/radio-tools" "${NOZZLE_DIR}/"
-  
+
   print_info "Copying linux-tools..."
   cp -r "${TEMP_CLONE_DIR}/linux-tools" "${NOZZLE_DIR}/"
-  
+
   # Copy the installer itself for future use
   if [ -f "${TEMP_CLONE_DIR}/install.sh" ]; then
     print_info "Copying installer script..."
     cp "${TEMP_CLONE_DIR}/install.sh" "${NOZZLE_DIR}/"
     chmod +x "${NOZZLE_DIR}/install.sh"
   fi
-  
+
   # Make all shell scripts executable
   print_info "Making scripts executable..."
   find "${NOZZLE_DIR}" -type f -name "*.sh" -exec chmod +x {} \;
-  
+
   print_success "Files installed successfully"
 }
 
 install_nozzle_menu() {
   print_header "Installing Nozzle Menu"
-  
+
   local nozzle_menu_src="${NOZZLE_DIR}/bin/nozzle-menu"
-  
+
   # Check if source file exists
   if [ ! -f "${nozzle_menu_src}" ]; then
     print_error "nozzle-menu not found at ${nozzle_menu_src}"
     print_info "You can install it manually later if the file becomes available"
     return 1
   fi
-  
+
   # Check if we can write to /opt/emcomm-tools/bin
   if [ ! -d "${ETC_BIN_DIR}" ]; then
     print_warning "Directory ${ETC_BIN_DIR} does not exist"
@@ -219,11 +523,11 @@ install_nozzle_menu() {
     echo "  sudo chmod +x /opt/emcomm-tools/bin/nozzle-menu"
     return 0
   fi
-  
+
   if [ ! -w "${ETC_BIN_DIR}" ]; then
     print_warning "Cannot write to ${ETC_BIN_DIR} (need sudo)"
     print_info "Attempting to install with sudo..."
-    
+
     # Try with sudo
     if sudo cp "${nozzle_menu_src}" "${ETC_BIN_DIR}/" 2>/dev/null && \
        sudo chmod +x "${ETC_BIN_DIR}/nozzle-menu" 2>/dev/null; then
@@ -246,7 +550,7 @@ install_nozzle_menu() {
       return 1
     fi
   fi
-  
+
   echo
   print_success "nozzle-menu installed successfully"
 }
@@ -305,7 +609,7 @@ install_desktop_shortcuts() {
 
 show_next_steps() {
   print_header "Installation Complete!"
-  
+
   echo "All tools have been installed to:"
   echo "  ${NOZZLE_DIR}"
   echo
@@ -327,7 +631,7 @@ show_next_steps() {
   echo -e "${YELLOW}Linux System Tools:${NC}"
   echo "  sudo ${NOZZLE_DIR}/linux-tools/fix-sources.sh"
   echo
-  
+
   print_header "Notes"
   echo "• nozzle-menu has been installed to /opt/emcomm-tools/bin/"
   echo "• Run 'nozzle-menu' from anywhere to access the main menu"
@@ -343,6 +647,27 @@ show_next_steps() {
 ################################################################################
 
 main() {
+  # Check for --cubic flag
+  for arg in "$@"; do
+    if [ "${arg}" = "--cubic" ]; then
+      CUBIC_MODE=true
+    fi
+  done
+
+  # Auto-detect Cubic environment
+  if [ "${CUBIC_MODE}" = false ] && detect_cubic; then
+    echo
+    echo -e "${YELLOW}Cubic chroot environment detected.${NC}"
+    echo -e "${YELLOW}Switching to ISO builder mode...${NC}"
+    sleep 1
+    CUBIC_MODE=true
+  fi
+
+  if [ "${CUBIC_MODE}" = true ]; then
+    cubic_show_selection_menu
+    return
+  fi
+
   clear
   echo
   echo -e "${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
@@ -351,28 +676,28 @@ main() {
   echo -e "${GREEN}║                                                            ║${NC}"
   echo -e "${GREEN}╚════════════════════════════════════════════════════════════╝${NC}"
   echo
-  
+
   # Run pre-flight checks
   preflight_checks
-  
+
   # Clone the repository
   echo
   if ! clone_repository; then
     print_error "Failed to clone repository. Exiting."
     exit 1
   fi
-  
+
   # Backup existing installation if present
   echo
   backup_existing
-  
+
   # Install files
   echo
   if ! install_files; then
     print_error "Failed to install files. Exiting."
     exit 1
   fi
-  
+
   # Install nozzle-menu
   echo
   install_nozzle_menu || {
@@ -390,4 +715,4 @@ main() {
 }
 
 # Run main installation
-main
+main "$@"
