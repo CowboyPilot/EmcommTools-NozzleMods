@@ -8,7 +8,7 @@
 #   - VARA Tools launcher (Pat with VARA HF/FM, standalone VARA modems)
 #   - AIOC DireWolf modes (Simple TNC, Packet, APRS)
 #   - Radio options (G90 PTT mode, Anytone 578 commode)
-#   - Install options (Yaesu FT-710, Anytone 578, Mercury, AIOC)
+#   - Install options (Yaesu FT-710, Anytone 578, AIOC)
 #   - System fixes and maintenance
 #
 ################################################################################
@@ -81,10 +81,9 @@ global_cleanup() {
   # Kill Wine for this prefix
   WINEPREFIX="${WINEPREFIX}" wineserver -k 2>/dev/null || true
 
-  # Kill any leftover VARA / Mercury processes
+  # Kill any leftover VARA processes
   pkill -u "$USER" -f "VARA.exe" 2>/dev/null || true
   pkill -u "$USER" -f "VARAFM.exe" 2>/dev/null || true
-  pkill -u "$USER" -f "^mercury" 2>/dev/null || true
   pkill -f "pat http" 2>/dev/null || true
   pkill -u "$USER" -f "rigctld" 2>/dev/null || true
 
@@ -287,87 +286,6 @@ start_vara_fm() {
   echo -e "${GREEN}>>> Starting VARA FM...${NC}"
   WINEPREFIX="${WINEPREFIX}" "${WINE_BIN}" "${VARA_FM_EXE}" >/dev/null 2>&1 &
   sleep 3
-}
-
-################################################################################
-# Mercury Functions
-################################################################################
-
-MERCURY_INI="${HOME}/mercury.ini"
-MERCURY_BUILD_DIR="${HOME}/mercury-build"
-
-# Patch mercury.ini ARQ base port
-patch_mercury_ini_port() {
-  local port="$1"
-
-  if [[ ! -f "${MERCURY_INI}" ]]; then
-    echo -e "${YELLOW}  ! mercury.ini not found at ${MERCURY_INI}${NC}"
-    echo -e "${YELLOW}    Run 'Install Mercury Modem' from Install Options first${NC}"
-    return 1
-  fi
-
-  echo -e "${BLUE}  → Updating ${MERCURY_INI}${NC}"
-  echo -e "${BLUE}     Setting arq_tcp_base_port = ${port}${NC}"
-
-  cp "${MERCURY_INI}" "${MERCURY_INI}.backup" 2>/dev/null || true
-  sed -i "s/^arq_tcp_base_port.*/arq_tcp_base_port = ${port}/" "${MERCURY_INI}"
-
-  local new_port=$(grep "^arq_tcp_base_port" "${MERCURY_INI}" | sed 's/.*= *//')
-  if [[ "${new_port}" == "${port}" ]]; then
-    echo -e "${GREEN}  ✓ Successfully set arq_tcp_base_port = ${port}${NC}"
-  else
-    echo -e "${RED}  ! WARNING: Port may not have been set correctly${NC}"
-  fi
-}
-
-start_mercury() {
-  if ! command -v mercury &>/dev/null; then
-    echo -e "${RED}ERROR: 'mercury' command not found${NC}"
-    echo -e "${YELLOW}Please install Mercury first from Install Options menu${NC}"
-    return 1
-  fi
-
-  if [[ ! -f "${MERCURY_INI}" ]]; then
-    echo -e "${RED}ERROR: mercury.ini not found at ${MERCURY_INI}${NC}"
-    echo -e "${YELLOW}Please install Mercury first from Install Options menu${NC}"
-    return 1
-  fi
-
-  if [[ ! -d "${MERCURY_BUILD_DIR}" ]]; then
-    echo -e "${RED}ERROR: Mercury build directory not found at ${MERCURY_BUILD_DIR}${NC}"
-    echo -e "${YELLOW}Please install Mercury first from Install Options menu${NC}"
-    return 1
-  fi
-
-  echo -e "${GREEN}>>> Starting Mercury modem...${NC}"
-  cd "${MERCURY_BUILD_DIR}"
-  mercury -C "${MERCURY_INI}" &>/dev/null &
-  sleep 2
-  cd "${HOME}"
-}
-
-show_mercury_info() {
-  local port="$1"
-  local data_port=$((port + 1))
-
-  echo
-  echo -e "${GREEN}================================================================${NC}"
-  echo -e "${GREEN}  Mercury Web GUI${NC}"
-  echo -e "${GREEN}================================================================${NC}"
-  echo -e "${BLUE}  http://127.0.0.1:10000${NC}"
-  echo
-  echo -e "${GREEN}  Use the web GUI to select and adjust your sound card.${NC}"
-  echo
-  echo -e "${GREEN}  ARQ ports: cmd=${port}, data=${data_port}${NC}"
-  echo
-  echo -e "${YELLOW}  IMPORTANT: Mercury does not control PTT.${NC}"
-  echo -e "${YELLOW}  Your client program (Pat, BPQ, etc.) must be configured${NC}"
-  echo -e "${YELLOW}  to handle its own PTT control via rigctld or CAT.${NC}"
-  echo
-  echo -e "${GREEN}  Mercury is compatible with any program that supports VARA.${NC}"
-  echo -e "${GREEN}  Configure the program to connect to Mercury's ARQ ports${NC}"
-  echo -e "${GREEN}  (${port}/${data_port}) just as you would with VARA.${NC}"
-  echo
 }
 
 ################################################################################
@@ -624,25 +542,6 @@ install_hamlib_anytone() {
   fi
 }
 
-install_mercury() {
-  clear
-  echo -e "${GREEN}================================================================${NC}"
-  echo -e "${GREEN}           Mercury Modem Installation${NC}"
-  echo -e "${GREEN}================================================================${NC}"
-  echo
-
-  if [[ -f "${NOZZLE_DIR}/radio-tools/mercury/install_mercury.sh" ]]; then
-    cd "${NOZZLE_DIR}/radio-tools/mercury"
-    bash install_mercury.sh
-    echo
-    read -r -p "Press Enter to return to menu..."
-  else
-    echo -e "${RED}ERROR: Mercury installer not found at ${NOZZLE_DIR}/radio-tools/mercury/install_mercury.sh${NC}"
-    echo
-    read -r -p "Press Enter to return to menu..."
-  fi
-}
-
 install_aioc() {
   clear
   echo -e "${GREEN}================================================================${NC}"
@@ -886,8 +785,7 @@ show_install_menu() {
     echo "  1) Install Yaesu FT-710 Support"
     echo "  2) Install Anytone 578 Support"
     echo "  3) Install Custom Hamlib (Anytone 578 driver)"
-    echo "  4) Install Mercury Modem"
-    echo "  5) Install AIOC Support"
+    echo "  4) Install AIOC Support"
     echo ""
     echo "  B) Back to Main Menu"
     echo ""
@@ -907,9 +805,6 @@ show_install_menu() {
         install_hamlib_anytone
         ;;
       4)
-        install_mercury
-        ;;
-      5)
         install_aioc
         ;;
       B)
@@ -1034,11 +929,6 @@ show_menu() {
   echo "  2) Pat + VARA FM"
   echo "  3) VARA HF Modem Only"
   echo "  4) VARA FM Modem Only"
-  echo ""
-  echo "Mercury Modem:"
-  echo ""
-  echo "  5) Mercury Standalone"
-  echo "  6) Pat + Mercury"
   echo ""
   echo -e "${YELLOW}════════════════════════════════════════════════════════════${NC}"
   echo ""
@@ -1197,72 +1087,6 @@ main() {
         echo -e "${GREEN}  Connect to: ${IP_ADDR}:${PORT}${NC}"
         echo -e "${GREEN}================================================================${NC}"
         echo
-        read -r -p "Press Enter to return to menu..."
-        ;;
-
-      5)
-        # Mercury Standalone
-        global_cleanup
-        et-audio update-config 2>/dev/null || true
-
-        echo
-        echo -e "${BLUE}Selected: Mercury Standalone${NC}"
-
-        PORT=$(find_free_port) || {
-          echo -e "${RED}ERROR: No free port found in 8300-8350${NC}"
-          sleep 3
-          continue
-        }
-        echo -e "${GREEN}Using TCP port: ${PORT}${NC}"
-
-        echo
-        echo "Updating mercury.ini..."
-        patch_mercury_ini_port "${PORT}" || {
-          sleep 3
-          continue
-        }
-
-        echo
-        start_mercury || {
-          sleep 3
-          continue
-        }
-
-        show_mercury_info "${PORT}"
-        read -r -p "Press Enter to return to menu..."
-        ;;
-
-      6)
-        # Pat + Mercury
-        global_cleanup
-        et-audio update-config 2>/dev/null || true
-
-        echo
-        echo -e "${BLUE}Selected: Pat + Mercury${NC}"
-
-        PORT=$(find_free_port) || {
-          echo -e "${RED}ERROR: No free port found in 8300-8350${NC}"
-          sleep 3
-          continue
-        }
-        echo -e "${GREEN}Using TCP port: ${PORT}${NC}"
-
-        echo
-        echo "Updating configuration files..."
-        patch_mercury_ini_port "${PORT}" || {
-          sleep 3
-          continue
-        }
-        configure_pat "HF" "${PORT}"
-
-        echo
-        start_mercury || {
-          sleep 3
-          continue
-        }
-        start_pat
-
-        show_mercury_info "${PORT}"
         read -r -p "Press Enter to return to menu..."
         ;;
 
