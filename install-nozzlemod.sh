@@ -92,9 +92,24 @@ trap cleanup_temp EXIT
 ################################################################################
 
 detect_cubic() {
-  # Cubic chroot: root user, no systemd as PID 1
-  # Don't require /opt/emcomm-tools — it won't exist on a fresh chroot
+  # Cubic chroot: root user + one of these signals:
+  #   - hostname is "cubic"
+  #   - ischroot says yes
+  #   - PID 1 is not systemd (fallback)
   if [ "$EUID" -eq 0 ]; then
+    # Cubic sets the hostname to "cubic"
+    local hn
+    hn=$(hostname 2>/dev/null || cat /etc/hostname 2>/dev/null || true)
+    if [ "${hn}" = "cubic" ]; then
+      return 0
+    fi
+
+    # ischroot utility (from debianutils)
+    if command -v ischroot >/dev/null 2>&1 && ischroot 2>/dev/null; then
+      return 0
+    fi
+
+    # Fallback: PID 1 not systemd (host /proc may leak through)
     local pid1_comm=""
     if [ -f /proc/1/comm ]; then
       pid1_comm=$(cat /proc/1/comm 2>/dev/null || true)
