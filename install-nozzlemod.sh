@@ -8,15 +8,15 @@
 #   - linux-tools/ → ~/NozzleMods/linux-tools/
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install-nozzlemod.sh | bash
 #
 # Or download and run:
-#   wget https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install.sh
-#   chmod +x install.sh
-#   ./install.sh
+#   wget https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install-nozzlemod.sh
+#   chmod +x install-nozzlemod.sh
+#   ./install-nozzlemod.sh
 #
-# Cubic ISO builder mode (auto-detected or forced):
-#   ./install.sh --cubic
+# Cubic ISO builder mode (auto-detected in chroot, or forced with --cubic):
+#   curl -fsSLo /tmp/install-nozzlemod.sh https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install-nozzlemod.sh && bash /tmp/install-nozzlemod.sh
 ################################################################################
 
 set -euo pipefail
@@ -262,7 +262,7 @@ cubic_apply_selections() {
   cp -r "${src}/bin" "${skel_nozzle}/"
   cp -r "${src}/radio-tools" "${skel_nozzle}/"
   cp -r "${src}/linux-tools" "${skel_nozzle}/"
-  [ -f "${src}/install.sh" ] && cp "${src}/install.sh" "${skel_nozzle}/"
+  [ -f "${src}/install-nozzlemod.sh" ] && cp "${src}/install-nozzlemod.sh" "${skel_nozzle}/"
   find "${skel_nozzle}" -type f -name "*.sh" -exec chmod +x {} \;
   chmod +x "${skel_nozzle}/bin/nozzle-menu" 2>/dev/null || true
   print_success "NozzleMods installed to skeleton"
@@ -416,7 +416,7 @@ preflight_checks() {
     print_error "Do NOT run this script as root"
     echo
     echo "Run as your normal user:"
-    echo "  ./install.sh"
+    echo "  ./install-nozzlemod.sh"
     exit 1
   fi
 
@@ -489,10 +489,10 @@ install_files() {
   cp -r "${TEMP_CLONE_DIR}/linux-tools" "${NOZZLE_DIR}/"
 
   # Copy the installer itself for future use
-  if [ -f "${TEMP_CLONE_DIR}/install.sh" ]; then
+  if [ -f "${TEMP_CLONE_DIR}/install-nozzlemod.sh" ]; then
     print_info "Copying installer script..."
-    cp "${TEMP_CLONE_DIR}/install.sh" "${NOZZLE_DIR}/"
-    chmod +x "${NOZZLE_DIR}/install.sh"
+    cp "${TEMP_CLONE_DIR}/install-nozzlemod.sh" "${NOZZLE_DIR}/"
+    chmod +x "${NOZZLE_DIR}/install-nozzlemod.sh"
   fi
 
   # Make all shell scripts executable

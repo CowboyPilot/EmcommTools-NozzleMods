@@ -604,7 +604,7 @@ update_nozzle_tools() {
 
     local temp_installer="/tmp/nozzle-install-update.sh"
 
-    if curl -fsSL "https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install.sh" -o "${temp_installer}"; then
+    if curl -fsSL "https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install-nozzlemod.sh" -o "${temp_installer}"; then
       chmod +x "${temp_installer}"
       echo
       echo "Running installer..."

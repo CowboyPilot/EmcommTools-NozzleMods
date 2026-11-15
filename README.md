@@ -5,15 +5,23 @@ A collection of scripts and tools to enhance EmComm Tools R7 with VARA modem lau
 ## Quick Installation
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install-nozzlemod.sh | bash
 ```
 
 Or download and run:
 
 ```bash
-wget https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install.sh
-chmod +x install.sh
-./install.sh
+wget https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install-nozzlemod.sh
+chmod +x install-nozzlemod.sh
+./install-nozzlemod.sh
+```
+
+### Cubic ISO Builder Mode
+
+When building a custom ETC ISO with [Cubic](https://github.com/PJ-Singh-001/Cubic), the installer auto-detects the chroot environment and presents an interactive menu for selecting which mods to bake into the ISO. In the Cubic terminal:
+
+```bash
+curl -fsSLo /tmp/install-nozzlemod.sh https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install-nozzlemod.sh && bash /tmp/install-nozzlemod.sh
 ```
 
 ## What Gets Installed
@@ -22,7 +30,7 @@ The installer clones the entire repository to `~/NozzleMods/` with the following
 
 ```
 NozzleMods/
-├── install.sh                          # Installer (for easy updates)
+├── install-nozzlemod.sh                          # Installer (for easy updates)
 ├── bin/
 │   └── nozzle-menu                    # Main menu launcher
 ├── radio-tools/
@@ -368,12 +376,12 @@ nozzle-menu
 
 ### Method 2: Re-run installer
 ```bash
-curl -fsSL https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install-nozzlemod.sh | bash
 ```
 
 ### Method 3: Use local installer
 ```bash
-~/NozzleMods/install.sh
+~/NozzleMods/install-nozzlemod.sh
 ```
 
 **Update Process:**
@@ -610,7 +618,7 @@ et-user
 ls -l /dev/et-*
 
 # Update NozzleMods
-~/NozzleMods/install.sh
+~/NozzleMods/install-nozzlemod.sh
 ```
 
 ### Emergency Radio Setup
