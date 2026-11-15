@@ -92,8 +92,9 @@ trap cleanup_temp EXIT
 ################################################################################
 
 detect_cubic() {
-  # Cubic chroot: root user, no systemd as PID 1, ETC filesystem present
-  if [ "$EUID" -eq 0 ] && [ -d "${ETC_HOME}" ]; then
+  # Cubic chroot: root user, no systemd as PID 1
+  # Don't require /opt/emcomm-tools — it won't exist on a fresh chroot
+  if [ "$EUID" -eq 0 ]; then
     local pid1_comm=""
     if [ -f /proc/1/comm ]; then
       pid1_comm=$(cat /proc/1/comm 2>/dev/null || true)
