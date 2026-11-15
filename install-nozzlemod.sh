@@ -109,6 +109,162 @@ detect_cubic() {
 # Cubic ISO Builder Mode
 ################################################################################
 
+cubic_bootstrap_etc() {
+  # Called when ETC hasn't been installed yet (no rigctl → no hamlib → no ETC)
+  print_header "EmComm Tools Not Detected"
+  echo "rigctl was not found, which means EmComm Tools has not been"
+  echo "installed in this Cubic environment yet."
+  echo
+  echo -e "${YELLOW}This wizard will download ETC R7 and run its installer first,${NC}"
+  echo -e "${YELLOW}then continue with NozzleMods.${NC}"
+  echo
+
+  # 1) Get the ETC archive URL from the user
+  echo -e "${BLUE}Paste the URL to the ETC R7 archive (.zip or .tar.gz):${NC}"
+  echo -n "> "
+  read -r etc_url </dev/tty
+
+  if [[ -z "${etc_url}" ]]; then
+    print_error "No URL provided. Exiting."
+    exit 1
+  fi
+
+  # Validate extension
+  local etc_file
+  etc_file=$(basename "${etc_url}" | sed 's/?.*//')
+  local ext=""
+  if [[ "${etc_file}" == *.tar.gz ]]; then
+    ext="tar.gz"
+  elif [[ "${etc_file}" == *.tgz ]]; then
+    ext="tgz"
+  elif [[ "${etc_file}" == *.zip ]]; then
+    ext="zip"
+  else
+    print_error "URL must point to a .zip or .tar.gz file"
+    exit 1
+  fi
+
+  # 2) Download
+  local dl_dir="/tmp/etc-download"
+  rm -rf "${dl_dir}"
+  mkdir -p "${dl_dir}"
+  local dl_path="${dl_dir}/${etc_file}"
+
+  print_info "Downloading ETC R7..."
+  if ! curl -fSL -o "${dl_path}" "${etc_url}"; then
+    print_error "Download failed. Check the URL and try again."
+    exit 1
+  fi
+  print_success "Downloaded ${etc_file}"
+
+  # 3) Extract
+  local extract_dir="/tmp/etc-extract"
+  rm -rf "${extract_dir}"
+  mkdir -p "${extract_dir}"
+
+  print_info "Extracting..."
+  case "${ext}" in
+    tar.gz|tgz)
+      tar xzf "${dl_path}" -C "${extract_dir}"
+      ;;
+    zip)
+      if ! command -v unzip >/dev/null 2>&1; then
+        print_info "Installing unzip..."
+        apt-get update -qq && apt-get install -y -qq unzip
+      fi
+      unzip -q "${dl_path}" -d "${extract_dir}"
+      ;;
+  esac
+  print_success "Extracted"
+
+  # 4) Find the scripts directory
+  local root_dir
+  root_dir=$(find "${extract_dir}" -maxdepth 1 -mindepth 1 -type d | head -1)
+  if [[ -z "${root_dir}" ]]; then
+    print_error "Could not find extracted directory"
+    exit 1
+  fi
+
+  local scripts_dir="${root_dir}/scripts"
+  if [[ ! -d "${scripts_dir}" ]]; then
+    print_error "Expected scripts directory not found at ${scripts_dir}"
+    echo "Contents of extracted archive:"
+    ls -la "${root_dir}"
+    exit 1
+  fi
+  print_success "Found scripts directory: ${scripts_dir}"
+
+  # 5) Prompt user to copy any custom packages
+  echo
+  echo -e "${YELLOW}╔════════════════════════════════════════════════════════════╗${NC}"
+  echo -e "${YELLOW}║              Copy Custom Packages (Optional)              ║${NC}"
+  echo -e "${YELLOW}╚════════════════════════════════════════════════════════════╝${NC}"
+  echo
+  echo "If you have any custom .deb packages to include in the ISO,"
+  echo "use the Cubic copy button (top-left) to copy them into the"
+  echo "filesystem now."
+  echo
+  echo -e "${BLUE}Press Enter when ready to continue...${NC}"
+  read -r </dev/tty
+
+  # 6) Ask about NozzleMod Hamlib (AT578 branch)
+  echo
+  echo -e "${BLUE}Will you be installing the NozzleMod AT578 Hamlib branch? (Y/n):${NC}"
+  echo -n "> "
+  read -r hamlib_choice </dev/tty
+  hamlib_choice=$(echo "${hamlib_choice}" | tr '[:upper:]' '[:lower:]')
+
+  local use_nozzle_hamlib=true
+  if [[ "${hamlib_choice}" == "n" || "${hamlib_choice}" == "no" ]]; then
+    use_nozzle_hamlib=false
+  fi
+
+  if [[ "${use_nozzle_hamlib}" == true ]]; then
+    # Remove ETC's hamlib installer so it doesn't build twice
+    if [[ -f "${scripts_dir}/install-hamlib.sh" ]]; then
+      print_info "Removing ETC install-hamlib.sh (NozzleMods will build custom Hamlib later)..."
+      rm "${scripts_dir}/install-hamlib.sh"
+      print_success "ETC Hamlib installer removed"
+    else
+      print_warning "install-hamlib.sh not found in scripts dir — may have a different name"
+      echo "Contents of scripts directory:"
+      ls "${scripts_dir}"/*.sh 2>/dev/null || ls "${scripts_dir}/"
+      echo
+      echo -e "${YELLOW}If you see a hamlib install script above, enter its filename to remove it${NC}"
+      echo -e "${YELLOW}(or press Enter to skip):${NC}"
+      echo -n "> "
+      read -r hamlib_script </dev/tty
+      if [[ -n "${hamlib_script}" && -f "${scripts_dir}/${hamlib_script}" ]]; then
+        rm "${scripts_dir}/${hamlib_script}"
+        print_success "Removed ${hamlib_script}"
+      fi
+    fi
+  fi
+
+  # 7) Run ETC's install.sh from the scripts directory
+  print_header "Running ETC Installer"
+  print_info "Running install.sh from ${scripts_dir}..."
+  echo
+
+  cd "${scripts_dir}"
+  if bash install.sh; then
+    print_success "ETC installation complete"
+  else
+    print_warning "ETC install.sh exited with non-zero status"
+    echo -e "${YELLOW}Some components may not have installed correctly.${NC}"
+    echo -e "${YELLOW}Press Enter to continue with NozzleMods anyway, or Ctrl+C to abort.${NC}"
+    read -r </dev/tty
+  fi
+  cd /
+
+  # Cleanup
+  rm -rf "${dl_dir}" "${extract_dir}"
+
+  echo
+  print_success "ETC bootstrap complete — continuing with NozzleMods..."
+  echo
+}
+
 cubic_show_selection_menu() {
   # Selection state arrays — all off by default
   local -a radio_sel=(1 1 1 1)
@@ -786,6 +942,10 @@ main() {
   fi
 
   if [ "${CUBIC_MODE}" = true ]; then
+    # Check if ETC has already been installed (rigctl = hamlib = ETC ran)
+    if ! command -v rigctl >/dev/null 2>&1; then
+      cubic_bootstrap_etc
+    fi
     cubic_show_selection_menu
     return
   fi
