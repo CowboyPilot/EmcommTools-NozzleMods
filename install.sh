@@ -170,7 +170,7 @@ cubic_show_selection_menu() {
     echo
     echo -n "Enter choice: "
 
-    read -r choice
+    read -r choice </dev/tty
     choice=$(echo "${choice}" | tr '[:lower:]' '[:upper:]')
 
     case "${choice}" in
