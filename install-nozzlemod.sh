@@ -704,6 +704,18 @@ cubic_apply_selections() {
     done
   fi
 
+  # ── Desktop icon placement: top-left via dconf system override ──
+  local dconf_dir="/etc/dconf/db/local.d"
+  mkdir -p "${dconf_dir}"
+  cat > "${dconf_dir}/01-nozzlemods-desktop" <<'DCONF'
+[org/gnome/shell/extensions/ding]
+start-corner='top-left'
+DCONF
+  if command -v dconf >/dev/null 2>&1; then
+    dconf update 2>/dev/null || true
+  fi
+  print_success "Desktop icons set to arrange from top-left"
+
   # ── XARA Enhancements ──
   patch_et_xara
   if command -v xara >/dev/null 2>&1 || [ -f "${ETC_BIN_DIR}/et-xara" ]; then
