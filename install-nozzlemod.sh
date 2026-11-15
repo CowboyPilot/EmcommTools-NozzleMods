@@ -221,15 +221,20 @@ cubic_bootstrap_etc() {
   fi
   print_success "Found scripts directory: ${scripts_dir}"
 
-  # 5) Prompt user to copy any custom packages
+  # 5) Prompt user to copy custom packages into the scripts directory
+  cd "${scripts_dir}"
   echo
   echo -e "${YELLOW}╔════════════════════════════════════════════════════════════╗${NC}"
   echo -e "${YELLOW}║              Copy Custom Packages (Optional)              ║${NC}"
   echo -e "${YELLOW}╚════════════════════════════════════════════════════════════╝${NC}"
   echo
-  echo "If you have any custom .deb packages to include in the ISO,"
-  echo "use the Cubic copy button (top-left) to copy them into the"
-  echo "filesystem now."
+  echo "If you have custom packages (e.g. pfte, xara-1.2.0.tar.gz),"
+  echo "use the Cubic copy button (top-left) to copy them now."
+  echo
+  echo "The current directory is set to the ETC scripts directory:"
+  echo -e "  ${BLUE}${scripts_dir}${NC}"
+  echo
+  echo "Cubic will drop copied files here so install.sh can find them."
   echo
   echo -e "${BLUE}Press Enter when ready to continue...${NC}"
   read -r </dev/tty
