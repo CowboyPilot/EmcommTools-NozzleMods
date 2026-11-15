@@ -111,8 +111,8 @@ detect_cubic() {
 
 cubic_show_selection_menu() {
   # Selection state arrays — all off by default
-  local -a radio_sel=(0 0 0 0)
-  local -a desktop_sel=(0 0 0 0 0 0 0)
+  local -a radio_sel=(1 1 1 1)
+  local -a desktop_sel=(1 1 1 1 1 1 1)
 
   local radio_labels=(
     "Xiegu G90 Mod"
