@@ -288,20 +288,7 @@ cubic_bootstrap_etc() {
   rm -rf "${dl_dir}" "${extract_dir}"
 
   # 8) Patch et-xara with additional flags
-  local et_xara="${ETC_BIN_DIR}/et-xara"
-  if [ -f "${et_xara}" ]; then
-    print_info "Patching et-xara with keying directory and UI flags..."
-    if grep -q -- '--ui-port' "${et_xara}"; then
-      print_warning "et-xara already patched"
-    else
-      sed -i 's|--ptt ${PTT}$|--ptt ${PTT} \\\n  --ui-port 8081 \\\n  --ui-addr 127.0.0.1 \\\n  --waveform auto \\\n  --hf-keying-dir="${HOME}/Desktop/xara/hf_keying" \\\n  --fm-keying-dir="${HOME}/Desktop/xara/fm_keying"|' "${et_xara}"
-      if grep -q -- '--ui-port' "${et_xara}"; then
-        print_success "et-xara patched"
-      else
-        print_warning "et-xara patch may not have applied — check manually"
-      fi
-    fi
-  fi
+  patch_et_xara
 
   # 9) Prompt to copy files to the ISO desktop
   echo
@@ -715,6 +702,13 @@ cubic_apply_selections() {
     done
   fi
 
+  # ── XARA Enhancements ──
+  patch_et_xara
+  if command -v xara >/dev/null 2>&1 || [ -f "${ETC_BIN_DIR}/et-xara" ]; then
+    install_xara_desktop_shortcut "/etc/skel/Desktop" "${src}/bin/xara-status.desktop" ""
+    setup_xara_keying_dirs "/etc/skel/Desktop"
+  fi
+
   echo
   print_header "Cubic ISO Build Complete"
   echo "Selected NozzleMods have been applied to the ISO filesystem."
@@ -730,6 +724,57 @@ cubic_apply_selections() {
   echo
   echo -e "${GREEN}73!${NC}"
   echo
+}
+
+################################################################################
+# Shared: XARA Enhancements (used by both Cubic and live install)
+################################################################################
+
+patch_et_xara() {
+  local et_xara="${ETC_BIN_DIR}/et-xara"
+  if [ ! -f "${et_xara}" ]; then
+    return 0
+  fi
+  print_info "Patching et-xara with keying directory and UI flags..."
+  if grep -q -- '--ui-port' "${et_xara}"; then
+    print_warning "et-xara already patched"
+  else
+    local use_sudo=""
+    [ ! -w "${et_xara}" ] && use_sudo="sudo"
+    ${use_sudo} sed -i 's|--ptt ${PTT}$|--ptt ${PTT} \\\n  --ui-port 8081 \\\n  --ui-addr 127.0.0.1 \\\n  --waveform auto \\\n  --hf-keying-dir="${HOME}/Desktop/xara/hf_keying" \\\n  --fm-keying-dir="${HOME}/Desktop/xara/fm_keying"|' "${et_xara}"
+    if grep -q -- '--ui-port' "${et_xara}"; then
+      print_success "et-xara patched"
+    else
+      print_warning "et-xara patch may not have applied — check manually"
+    fi
+  fi
+}
+
+install_xara_desktop_shortcut() {
+  # $1 = desktop directory, $2 = source .desktop file, $3 = "sudo" or ""
+  local desktop_dir="$1"
+  local desktop_src="$2"
+  local use_sudo="${3:-}"
+
+  if [ ! -f "${desktop_src}" ]; then
+    return 0
+  fi
+
+  mkdir -p "${desktop_dir}"
+  ${use_sudo} cp "${desktop_src}" "${desktop_dir}/xara-status.desktop"
+  ${use_sudo} chmod +x "${desktop_dir}/xara-status.desktop"
+
+  # Also install to applications menu
+  ${use_sudo} cp "${desktop_src}" "/usr/share/applications/xara-status.desktop" 2>/dev/null || true
+
+  print_success "Desktop shortcut: XARA Status"
+}
+
+setup_xara_keying_dirs() {
+  # $1 = base desktop directory
+  local desktop_dir="$1"
+  mkdir -p "${desktop_dir}/xara/hf_keying" "${desktop_dir}/xara/fm_keying"
+  print_success "Created xara keying directories"
 }
 
 ################################################################################
@@ -976,6 +1021,13 @@ install_desktop_shortcuts() {
       sudo cp "${src}" "${apps_dir}/${desktop_file}.desktop" 2>/dev/null
     fi
   done
+
+  # XARA enhancements
+  patch_et_xara
+  if command -v xara >/dev/null 2>&1 || [ -f "${ETC_BIN_DIR}/et-xara" ]; then
+    install_xara_desktop_shortcut "${desktop_dir}" "${NOZZLE_DIR}/bin/xara-status.desktop" ""
+    setup_xara_keying_dirs "${desktop_dir}"
+  fi
 }
 
 ################################################################################

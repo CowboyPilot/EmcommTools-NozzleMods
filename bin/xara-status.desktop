@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Name=XARA Status
+Comment=XARA modem web status page
+Exec=xdg-open http://127.0.0.1:8081
+Icon=web-browser
+Terminal=false
+Type=Application
+Categories=HamRadio;
+StartupNotify=false
