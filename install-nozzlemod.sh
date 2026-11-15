@@ -693,6 +693,8 @@ cubic_apply_selections() {
         if [ -f "${desktop_src}" ]; then
           cp "${desktop_src}" "${skel_desktop}/${df}.desktop"
           chmod +x "${skel_desktop}/${df}.desktop"
+          # Mark trusted so GNOME skips "Allow Launching" for new users
+          setfattr -n user.trusted -v true "${skel_desktop}/${df}.desktop" 2>/dev/null || true
           cp "${desktop_src}" "${apps_dir}/${df}.desktop"
           print_success "Desktop shortcut: ${df}"
         else
@@ -763,6 +765,11 @@ install_xara_desktop_shortcut() {
   mkdir -p "${desktop_dir}"
   ${use_sudo} cp "${desktop_src}" "${desktop_dir}/xara-status.desktop"
   ${use_sudo} chmod +x "${desktop_dir}/xara-status.desktop"
+
+  # Mark as trusted so GNOME doesn't show "Allow Launching" prompt
+  gio set "${desktop_dir}/xara-status.desktop" metadata::trusted true 2>/dev/null || \
+    gio set "${desktop_dir}/xara-status.desktop" metadata::trusted yes 2>/dev/null || true
+  setfattr -n user.trusted -v true "${desktop_dir}/xara-status.desktop" 2>/dev/null || true
 
   # Also install to applications menu
   ${use_sudo} cp "${desktop_src}" "/usr/share/applications/xara-status.desktop" 2>/dev/null || true
