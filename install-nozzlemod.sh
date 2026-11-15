@@ -136,14 +136,16 @@ cubic_bootstrap_etc() {
   echo -e "${YELLOW}then continue with NozzleMods.${NC}"
   echo
 
-  # 1) Get the ETC archive URL from the user
-  echo -e "${BLUE}Paste the URL to the ETC R7 archive (.zip or .tar.gz):${NC}"
+  # 1) Get the ETC archive URL from the user (default to R7 release)
+  local default_etc_url="https://github.com/thetechprepper/emcomm-tools-os-community/archive/refs/heads/release/r7.zip"
+  echo -e "${BLUE}ETC R7 archive URL (.zip or .tar.gz):${NC}"
+  echo -e "  Default: ${default_etc_url}"
+  echo -e "${BLUE}Press Enter to use the default, or paste a different URL:${NC}"
   echo -n "> "
   read -r etc_url </dev/tty
 
   if [[ -z "${etc_url}" ]]; then
-    print_error "No URL provided. Exiting."
-    exit 1
+    etc_url="${default_etc_url}"
   fi
 
   # Validate extension
