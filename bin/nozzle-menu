@@ -2,7 +2,7 @@
 ################################################################################
 # nozzle-menu
 #
-# Main menu for NozzleMods - EmComm Tools R6 enhancements V2.0
+# Main menu for NozzleMods - EmComm Tools R7 enhancements
 #
 # Features:
 #   - VARA Tools launcher (Pat with VARA HF/FM, standalone VARA modems)
@@ -920,7 +920,7 @@ check_version
 show_menu() {
   clear
   echo -e "${GREEN}================================================================${NC}"
-  echo -e "${GREEN}           NozzleMods Menu - EmComm Tools R6${NC}"
+  echo -e "${GREEN}           NozzleMods Menu - EmComm Tools R7${NC}"
   echo -e "${GREEN}================================================================${NC}"
   echo ""
   echo "VARA Applications:"

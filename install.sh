@@ -1,6 +1,6 @@
 #!/bin/bash
 ################################################################################
-# NozzleMods Installer for EmComm Tools R6
+# NozzleMods Installer for EmComm Tools R7
 #
 # This script clones the NozzleMods repository and installs all tools:
 #   - nozzle-menu → /opt/emcomm-tools/bin/
@@ -347,7 +347,7 @@ main() {
   echo
   echo -e "${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
   echo -e "${GREEN}║                                                            ║${NC}"
-  echo -e "${GREEN}║              NozzleMods Installer for ETC R6               ║${NC}"
+  echo -e "${GREEN}║              NozzleMods Installer for ETC R7               ║${NC}"
   echo -e "${GREEN}║                                                            ║${NC}"
   echo -e "${GREEN}╚════════════════════════════════════════════════════════════╝${NC}"
   echo

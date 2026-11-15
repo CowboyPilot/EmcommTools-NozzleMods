@@ -1,5 +1,5 @@
 #!/bin/bash
-# Anytone 578 Support Installer for Emcomm Tools R6
+# Anytone 578 Support Installer for Emcomm Tools R7
 #
 #   USE AT YOUR OWN RISK
 # This script modifies system files.
@@ -32,7 +32,7 @@ echo "╔═══════════════════════�
 echo "║         WARNING - USE AT YOUR OWN RISK                         ║"
 echo "╚════════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
-echo "This script will modify system files for Emcomm Tools R6 to add"
+echo "This script will modify system files for Emcomm Tools R7 to add"
 echo "support for the Anytone 578 with Digirig Mobile."
 echo ""
 echo "Changes to be made:"

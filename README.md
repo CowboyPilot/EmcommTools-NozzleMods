@@ -1,6 +1,6 @@
-# NozzleMods for EmComm Tools R6
+# NozzleMods for EmComm Tools R7
 
-A collection of scripts and tools to enhance EmComm Tools R6 with VARA modem launching (via Pat), AIOC DireWolf integration, radio configuration utilities, and system maintenance tools.
+A collection of scripts and tools to enhance EmComm Tools R7 with VARA modem launching (via Pat), AIOC DireWolf integration, radio configuration utilities, and system maintenance tools.
 
 ## Quick Installation
 
@@ -39,8 +39,6 @@ NozzleMods/
 │   │   ├── anytone-578.json           # Radio configuration
 │   │   ├── anytone-578.sh             # Audio script
 │   │   └── udev-tester.patch          # System patches
-│   ├── mercury/
-│   │   └── install_mercury.sh         # Build/install Mercury modem
 │   └── aioc/
 │       ├── install_aioc.sh            # Install AIOC support
 │       ├── aioc.json                  # AIOC radio configuration
@@ -59,7 +57,7 @@ The installer also copies `nozzle-menu` to `/opt/emcomm-tools/bin/` for system-w
 
 Before using NozzleMods, ensure you have:
 
-1. **EmComm Tools R6** properly installed (includes Wine, VARA, Winlink Express, and VarAC)
+1. **EmComm Tools R7** properly installed (includes Wine, VARA, Winlink Express, VarAC, and Mercury)
 2. Run `et-user` to configure your callsign
 3. Run `et-audio` to configure audio
 4. Run `et-radio` to select your radio
@@ -84,16 +82,7 @@ Launch VARA modems with automatic port allocation and configuration:
 * **VARA HF Modem Only** - Standalone VARA HF modem server
 * **VARA FM Modem Only** - Standalone VARA FM modem server
 
-### Mercury Modem (Options 5-6)
-
-Launch the Mercury HF modem with automatic port allocation:
-
-* **Mercury Standalone** - Mercury modem with web GUI for sound card configuration
-* **Pat + Mercury** - Web-based Winlink client with Mercury modem
-
-Mercury is compatible with any program that supports VARA — configure your client to connect to Mercury's ARQ ports just as you would with VARA. Note that Mercury does not handle PTT; your client program must manage its own PTT control via rigctld or CAT.
-
-**Shared Features (VARA & Mercury):**
+**Features:**
 * Automatic free port detection (8300-8350 range)
 * Clean process management (kills old instances)
 * Automatic INI/config file updates
@@ -125,14 +114,25 @@ Perfect for digital modes, APRS, and packet radio with any K1-style connector ra
 
 ---
 
-### Radio Configuration (Option R)
+### Install Options (Option I)
 
-1. **Xiegu G90 DigiRig PTT** - Configure PTT mode (CAT or RTS)
-2. **Yaesu FT-710 Support** - Full installation with udev rules
-3. **Anytone 578 Support** - Install with Digirig Mobile integration
-4. **Custom Hamlib (Anytone 578)** - Build and install Hamlib fork with AT-D578UVIII driver
-5. **Mercury Modem** - Build and install Mercury HF modem
-6. **AIOC Support** - Install AIOC with DireWolf configurations
+1. **Yaesu FT-710 Support** - Full installation with udev rules
+2. **Anytone 578 Support** - Install with Digirig Mobile integration
+3. **Custom Hamlib (Anytone 578)** - Build and install Hamlib fork with AT-D578UVIII driver
+4. **AIOC Support** - Install AIOC with DireWolf configurations
+
+---
+
+### Radio Options (Option R)
+
+Toggle radio-specific settings without reinstalling:
+
+* **Set G90 RTS PTT** - Use RTS serial line for PTT (ETC default)
+* **Set G90 CAT PTT** - Use CAT commands for PTT
+* **Anytone 578 Simple Mic PTT** - Standard mic emulation mode (default)
+* **Anytone 578 Advanced BT-01 Emulation** - Full CAT control with frequency/VFO/clock (locks radio display), enables Pat AX.25 QSY rig control
+
+Each option automatically restarts rigctld to apply the new configuration.
 
 ---
 
@@ -226,6 +226,8 @@ Choose between:
 * **CAT PTT** - PTT via CAT commands
 * **RTS PTT** - PTT via RTS serial line
 
+These can also be toggled from `nozzle-menu -> R) Radio Options`.
+
 ---
 
 #### Yaesu FT-710
@@ -281,11 +283,15 @@ cd ~/NozzleMods/radio-tools/anytone-578
 * Do not enable mic volt det (Leave as UART)
 
 **Audio Settings (applied by audio script):**
-* Speaker (TX): 50% unmuted
+* Speaker (TX): 21% unmuted
 * Mic Playback: Muted
-* Mic Capture (RX): 19% unmuted
+* Mic Capture (RX): 13% unmuted
 * Auto Gain Control: Disabled
 * Adjust with `alsamixer` if needed
+
+**Operating Modes (toggle via Radio Options menu):**
+* **Simple Mic PTT** (default) - Standard mic emulation, no radio display lockout
+* **Advanced BT-01 Emulation** (`commode=1`) - Full CAT control with frequency/VFO/clock, enables Pat AX.25 QSY rig control. Locks radio display while connected.
 
 **Backup Location:**
 ```bash
@@ -334,37 +340,6 @@ rigctl -l | grep -i anytone
 
 ---
 
-#### Mercury Modem
-
-Mercury is an HF modem for digital voice and data. This option builds it from source with internal Hamlib disabled so it works alongside the custom Hamlib build.
-
-```bash
-cd ~/NozzleMods/radio-tools/mercury
-./install_mercury.sh
-```
-
-**What it does:**
-* Installs build dependencies if needed
-* Clones Mercury from GitHub
-* Disables internal Hamlib (`HAVE_HAMLIB=0`) to avoid conflicts
-* Builds and installs system-wide
-
-**Configuration:**
-The installer drops `~/mercury.ini` with sensible defaults:
-* Web GUI enabled on port 10000 (`http://127.0.0.1:10000`)
-* Internal Hamlib disabled (`radio_model = -1`)
-* Connects to rigctld at `127.0.0.1:4532`
-* ARQ ports at 8300/8301 (VARA-compatible)
-
-Use the web GUI to select and adjust your sound card settings.
-
-**Compatibility:**
-Mercury is compatible with any program that supports VARA — configure the program to connect to Mercury's ARQ ports just as you would with VARA. Mercury does not control PTT; your client program must handle its own PTT control via rigctld or CAT.
-
-**Rerun to update:** The build directory is kept at `~/mercury-build`. Rerunning the script pulls the latest source and rebuilds.
-
----
-
 ## System Maintenance
 
 ### Fix APT Repository Sources
@@ -388,6 +363,7 @@ sudo ~/NozzleMods/linux-tools/fix-sources.sh
 ```bash
 nozzle-menu
 # Select: S) System Tools -> 2) Update NozzleMods Tools
+# Or if an update is available: U) Update NozzleMods
 ```
 
 ### Method 2: Re-run installer
@@ -405,6 +381,12 @@ curl -fsSL https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/
 * Backs up existing installation with timestamp
 * Copies all new/updated files
 * Updates nozzle-menu in system bin directory
+
+The main menu displays a color-coded version indicator at the bottom:
+* **Green** - Current version
+* **Yellow** - Minor update available
+* **Red** - Significant update available
+* **Default color** - Unable to check (no internet)
 
 ---
 
@@ -498,6 +480,7 @@ TCP Command Port=8300
 | FT-710 Backups | `~/.ft710-backup/` |
 | Anytone 578 Backups | `~/.anytone578-backup/` |
 | G90 Backups | `/opt/emcomm-tools/conf/radios.d/*.backup.*` |
+| Version Cache | `~/.cache/nozzlemods/version_check` |
 
 ---
 
@@ -508,7 +491,7 @@ TCP Command Port=8300
 * Yaesu FT-710
 * Anytone 578 (with Digirig Mobile)
 * Any radio compatible with AIOC (K1-style connector)
-* Any radio supported by EmComm Tools R6
+* Any radio supported by EmComm Tools R7
 
 ### Interfaces
 * DigiRig Mobile
@@ -520,11 +503,12 @@ TCP Command Port=8300
 
 ## Credits
 
-* **EmComm Tools R6** by [TheTechPrepper](https://github.com/thetechprepper)
+* **EmComm Tools R7** by [TheTechPrepper](https://github.com/thetechprepper)
 * **AIOC Hardware** by [skuep](https://github.com/skuep/AIOC)
 * **VARA Modems** by Jose Alberto Reyes Martin, EA5HVK
 * **DireWolf** by John Langner, WB2OSZ
 * **Pat Winlink** by Martin Hebnes Pedersen, LA5NTA
+* **Mercury Modem** by [Rhizomatica](https://github.com/Rhizomatica/mercury)
 
 ---
 
@@ -540,11 +524,23 @@ Found a bug? Have a suggestion?
 
 ## Version History
 
-### V2.0 (Latest)
+### V2.2 (Latest)
+* Updated for EmComm Tools R7
+* Removed Mercury modem installation and menu entries (now included natively in ETC R7)
+* Added Radio Options menu for toggling G90 PTT mode and Anytone 578 commode
+* Added Pat AX.25 QSY rig control integration for Anytone 578 Advanced mode
+* Added rigctld restart after radio option changes
+* Added et-audio update-config to all mode launches
+* Added version display with daily-cached update check
+* Tuned Anytone 578 audio levels (Speaker 21%, Mic Capture 13%)
+* Tuned AIOC audio levels (-35dB)
+
+### V2.0
 * Updated for EmComm Tools R6
 * Removed VARA/Winlink/VarAC/Wine installation (now native to ETC R6)
 * Removed Chirp installation (available via ETC R6)
 * Added Anytone 578 support with Digirig Mobile
+* Added Mercury modem build and launch support
 * Streamlined menu to Pat + VARA and standalone VARA modem options
 
 ### V1.2
@@ -569,7 +565,7 @@ Found a bug? Have a suggestion?
 
 ## License
 
-These scripts are provided as-is for use with EmComm Tools R6.
+These scripts are provided as-is for use with EmComm Tools R7.
 
 **USE AT YOUR OWN RISK**
 
@@ -592,11 +588,14 @@ Happy operating!
 # Launch main menu
 nozzle-menu
 
-# Launch VARA or Mercury with Pat (from menu)
-nozzle-menu -> (1-6)
+# Launch VARA with Pat (from menu)
+nozzle-menu -> (1-4)
 
 # Launch AIOC mode (from menu)
 nozzle-menu -> A -> (1-3)
+
+# Toggle radio options
+nozzle-menu -> R
 
 # Configure radio
 et-radio
@@ -623,7 +622,7 @@ ls -l /dev/et-*
 
 ### AIOC Quick Start
 1. `nozzle-menu`
-2. Select: `R) Radio Configuration -> 4) Install AIOC`
+2. Select: `I) Install Options -> 4) Install AIOC`
 3. Reboot or reload udev
 4. `et-radio` - Select "AIOC"
 5. `nozzle-menu -> A` - Launch AIOC mode
