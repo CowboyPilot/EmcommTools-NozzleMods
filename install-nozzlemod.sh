@@ -92,14 +92,14 @@ trap cleanup_temp EXIT
 ################################################################################
 
 detect_cubic() {
-  # Cubic chroot: root user + one of these signals:
-  #   - hostname is "cubic"
-  #   - ischroot says yes
-  #   - PID 1 is not systemd (fallback)
+  # Cubic chroot: root user + one of these signals
   if [ "$EUID" -eq 0 ]; then
-    # Cubic sets the hostname to "cubic"
-    local hn
-    hn=$(hostname 2>/dev/null || cat /etc/hostname 2>/dev/null || true)
+    # Check hostname from every available source
+    local hn=""
+    hn="${HOSTNAME:-}"
+    [ -z "${hn}" ] && hn=$(hostname 2>/dev/null || true)
+    [ -z "${hn}" ] && hn=$(cat /etc/hostname 2>/dev/null || true)
+    [ -z "${hn}" ] && hn=$(cat /proc/sys/kernel/hostname 2>/dev/null || true)
     if [ "${hn}" = "cubic" ]; then
       return 0
     fi
@@ -109,13 +109,14 @@ detect_cubic() {
       return 0
     fi
 
-    # Fallback: PID 1 not systemd (host /proc may leak through)
-    local pid1_comm=""
-    if [ -f /proc/1/comm ]; then
-      pid1_comm=$(cat /proc/1/comm 2>/dev/null || true)
-    fi
-    if [ "${pid1_comm}" != "systemd" ]; then
-      return 0
+    # Chroot detection: / has a different device or inode than host root
+    if [ -r /proc/1/root ] 2>/dev/null; then
+      local root_dev host_dev
+      root_dev=$(stat -c '%d:%i' / 2>/dev/null || true)
+      host_dev=$(stat -c '%d:%i' /proc/1/root/. 2>/dev/null || true)
+      if [ -n "${root_dev}" ] && [ -n "${host_dev}" ] && [ "${root_dev}" != "${host_dev}" ]; then
+        return 0
+      fi
     fi
   fi
   return 1
