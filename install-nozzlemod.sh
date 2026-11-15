@@ -287,6 +287,49 @@ cubic_bootstrap_etc() {
   # Cleanup
   rm -rf "${dl_dir}" "${extract_dir}"
 
+  # 8) Patch et-xara with additional flags
+  local et_xara="${ETC_BIN_DIR}/et-xara"
+  if [ -f "${et_xara}" ]; then
+    print_info "Patching et-xara with keying directory and UI flags..."
+    if grep -q -- '--ui-port' "${et_xara}"; then
+      print_warning "et-xara already patched"
+    else
+      sed -i 's|--ptt ${PTT}$|--ptt ${PTT} \\\n  --ui-port 8081 \\\n  --ui-addr 127.0.0.1 \\\n  --waveform auto \\\n  --hf-keying-dir="${HOME}/Desktop/xara/hf_keying" \\\n  --fm-keying-dir="${HOME}/Desktop/xara/fm_keying"|' "${et_xara}"
+      if grep -q -- '--ui-port' "${et_xara}"; then
+        print_success "et-xara patched"
+      else
+        print_warning "et-xara patch may not have applied — check manually"
+      fi
+    fi
+  fi
+
+  # 9) Prompt to copy files to the ISO desktop
+  echo
+  echo -e "${YELLOW}╔════════════════════════════════════════════════════════════╗${NC}"
+  echo -e "${YELLOW}║              Copy Files to ISO Desktop (Optional)         ║${NC}"
+  echo -e "${YELLOW}╚════════════════════════════════════════════════════════════╝${NC}"
+  echo
+  echo "If you have files you'd like on every user's desktop in the ISO,"
+  echo "use the Cubic copy button (top-left) to copy them now."
+  echo
+  echo "The current directory has been set to /etc/skel/Desktop so"
+  echo "Cubic will place copied files directly on the desktop."
+  echo
+  if command -v xara >/dev/null 2>&1; then
+    echo -e "${BLUE}Xara was installed successfully.${NC}"
+    echo "The default search directories for keying files will be:"
+    echo "  • Desktop/xara/hf_keying"
+    echo "  • Desktop/xara/fm_keying"
+    echo
+    mkdir -p /etc/skel/Desktop/xara/hf_keying /etc/skel/Desktop/xara/fm_keying
+    print_success "Created xara keying directories in skeleton desktop"
+    echo
+  fi
+  cd /etc/skel/Desktop
+  echo -e "${BLUE}Press Enter when ready to continue...${NC}"
+  read -r </dev/tty
+  cd /
+
   echo
   print_success "ETC bootstrap complete — continuing with NozzleMods..."
   echo
