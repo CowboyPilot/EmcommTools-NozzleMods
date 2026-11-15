@@ -16,7 +16,7 @@
 #   ./install-nozzlemod.sh
 #
 # Cubic ISO builder mode (auto-detected in chroot, or forced with --cubic):
-#   curl -fsSLo /tmp/install-nozzlemod.sh https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install-nozzlemod.sh && bash /tmp/install-nozzlemod.sh
+#   wget -O /tmp/install-nozzlemod.sh https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install-nozzlemod.sh && bash /tmp/install-nozzlemod.sh
 ################################################################################
 
 set -euo pipefail
@@ -151,8 +151,18 @@ cubic_bootstrap_etc() {
   local dl_path="${dl_dir}/${etc_file}"
 
   print_info "Downloading ETC R7..."
-  if ! curl -fSL -o "${dl_path}" "${etc_url}"; then
-    print_error "Download failed. Check the URL and try again."
+  if command -v curl >/dev/null 2>&1; then
+    if ! curl -fSL -o "${dl_path}" "${etc_url}"; then
+      print_error "Download failed. Check the URL and try again."
+      exit 1
+    fi
+  elif command -v wget >/dev/null 2>&1; then
+    if ! wget -q -O "${dl_path}" "${etc_url}"; then
+      print_error "Download failed. Check the URL and try again."
+      exit 1
+    fi
+  else
+    print_error "Neither curl nor wget found. Install one and try again."
     exit 1
   fi
   print_success "Downloaded ${etc_file}"
