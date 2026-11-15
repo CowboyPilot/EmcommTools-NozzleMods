@@ -1,5 +1,5 @@
 #!/bin/bash
-# Yaesu AIOC Support Installer for Emcomm Tools R5
+# Yaesu AIOC Support Installer for Emcomm Tools R7
 # Author: Generated for AIOC support
 # Date: Dec 22, 2025
 #
@@ -36,7 +36,7 @@ echo "╔═══════════════════════�
 echo "║                    ⚠️  WARNING - USE AT YOUR OWN RISK ⚠️        ║"
 echo "╚════════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
-echo "This script will modify system files for Emcomm Tools R5 to add"
+echo "This script will modify system files for Emcomm Tools R7 to add"
 echo "support for the AIOC (All-In-One-Cable)."
 echo ""
 echo "Changes to be made:"

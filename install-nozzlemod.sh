@@ -239,6 +239,11 @@ cubic_apply_selections() {
   fi
 
   local src="${TEMP_CLONE_DIR}"
+  local radios_dir="${ETC_HOME}/conf/radios.d"
+  local audio_dir="${radios_dir}/audio"
+  local sbin_dir="${ETC_HOME}/sbin"
+  local udev_dir="/etc/udev/rules.d"
+  local direwolf_dir="${ETC_HOME}/conf/template.d/packet"
 
   # Always install nozzle-menu and bin scripts to the ISO
   print_info "Installing nozzle-menu to ${ETC_BIN_DIR}..."
@@ -269,67 +274,183 @@ cubic_apply_selections() {
 
   echo
 
-  # Radio mods
+  # ── Radio Mods (done inline — sub-scripts reject root / need interactive input) ──
+
+  # 1) Xiegu G90 — set CAT PTT in existing config
   if [[ "${_radio[0]}" -eq 1 ]]; then
     print_header "Applying Xiegu G90 Mod"
-    if [ -f "${src}/radio-tools/xiegu-g90/update-g90-config.sh" ]; then
-      bash "${src}/radio-tools/xiegu-g90/update-g90-config.sh" || \
-        print_warning "G90 config script returned non-zero (may need interactive input)"
+    local g90_json="${radios_dir}/xiegu-g90.json"
+    if [ -f "${g90_json}" ]; then
+      if command -v jq >/dev/null 2>&1; then
+        cp "${g90_json}" "${g90_json}.backup"
+        jq '.rigctrl.ptt = "RIG"' "${g90_json}.backup" > "${g90_json}"
+        print_success "G90 config set to CAT PTT"
+      else
+        print_warning "jq not available — install it (apt install jq) and re-run, or configure G90 manually"
+      fi
     else
-      print_error "G90 config script not found"
+      print_warning "G90 config not found at ${g90_json} — radio may not be in this ETC build"
     fi
   fi
 
+  # 2) Yaesu FT-710 — install JSON, udev rules, patch udev-tester and et-audio
   if [[ "${_radio[1]}" -eq 1 ]]; then
     print_header "Applying Yaesu FT-710 Support"
-    if [ -f "${src}/radio-tools/yaesu-ft710/install_ft710.sh" ]; then
-      cd "${src}/radio-tools/yaesu-ft710"
-      bash install_ft710.sh || \
-        print_warning "FT-710 installer returned non-zero"
-      cd /
-    else
-      print_error "FT-710 installer not found"
+    local ft710_dir="${src}/radio-tools/yaesu-ft710"
+
+    # Radio config
+    if [ -f "${ft710_dir}/yaesu-ft710.json" ]; then
+      cp "${ft710_dir}/yaesu-ft710.json" "${radios_dir}/"
+      chown root:et-data "${radios_dir}/yaesu-ft710.json" 2>/dev/null || true
+      chmod 644 "${radios_dir}/yaesu-ft710.json"
+      print_success "FT-710 radio config installed"
+    fi
+
+    # udev rules
+    if [ -f "${ft710_dir}/78-et-ft710.rules" ]; then
+      cp "${ft710_dir}/78-et-ft710.rules" "${udev_dir}/"
+      chmod 644 "${udev_dir}/78-et-ft710.rules"
+      print_success "FT-710 udev rules installed"
+    fi
+
+    # Patch udev-tester.sh
+    if [ -f "${ft710_dir}/udev-tester.patch" ] && [ -f "${sbin_dir}/udev-tester.sh" ]; then
+      if grep -q "test_yaesu_ft710" "${sbin_dir}/udev-tester.sh"; then
+        print_warning "udev-tester.sh already patched for FT-710"
+      else
+        patch "${sbin_dir}/udev-tester.sh" < "${ft710_dir}/udev-tester.patch" && \
+          print_success "udev-tester.sh patched for FT-710" || \
+          print_warning "FT-710 udev-tester patch failed"
+      fi
+    fi
+
+    # Patch et-audio
+    if [ -f "${ft710_dir}/et-audio.patch" ] && [ -f "${ETC_BIN_DIR}/et-audio" ]; then
+      if grep -q '"FT-710")' "${ETC_BIN_DIR}/et-audio"; then
+        print_warning "et-audio already patched for FT-710"
+      else
+        patch "${ETC_BIN_DIR}/et-audio" < "${ft710_dir}/et-audio.patch" && \
+          print_success "et-audio patched for FT-710" || \
+          print_warning "FT-710 et-audio patch failed"
+      fi
     fi
   fi
 
+  # 3) Anytone 578 — build custom Hamlib, then install profile
   if [[ "${_radio[2]}" -eq 1 ]]; then
     print_header "Applying Anytone 578 Support"
+    local at578_dir="${src}/radio-tools/anytone-578"
 
-    # Build and install custom Hamlib first
-    if [ -f "${src}/radio-tools/anytone-578/install_hamlib_anytone.sh" ]; then
-      print_info "Building custom Hamlib with Anytone 578 driver..."
-      cd "${src}/radio-tools/anytone-578"
-      bash install_hamlib_anytone.sh || \
-        print_warning "Custom Hamlib build returned non-zero"
-      cd /
-    else
-      print_warning "Custom Hamlib installer not found, skipping"
+    # ── Build custom Hamlib ──
+    print_info "Checking Hamlib build dependencies..."
+    local hamlib_deps_missing=false
+    for cmd in git make gcc automake autoconf libtool pkg-config; do
+      if ! command -v "${cmd}" >/dev/null 2>&1; then
+        hamlib_deps_missing=true
+      fi
+    done
+
+    if [ "${hamlib_deps_missing}" = true ]; then
+      print_info "Installing build dependencies..."
+      apt-get update -qq
+      apt-get install -y -qq git build-essential automake autoconf libtool pkg-config libusb-1.0-0-dev
     fi
 
-    # Then install the Anytone 578 profile
-    if [ -f "${src}/radio-tools/anytone-578/install_anytone578.sh" ]; then
-      cd "${src}/radio-tools/anytone-578"
-      bash install_anytone578.sh || \
-        print_warning "Anytone 578 installer returned non-zero"
-      cd /
+    local hamlib_build="/tmp/hamlib-anytone-build"
+    local hamlib_repo="https://github.com/CowboyPilot/Hamlib.git"
+
+    print_info "Cloning custom Hamlib..."
+    rm -rf "${hamlib_build}"
+    git clone --depth 1 "${hamlib_repo}" "${hamlib_build}"
+
+    print_info "Building Hamlib (this may take several minutes)..."
+    cd "${hamlib_build}"
+    ./bootstrap
+    ./configure --prefix=/usr/local
+    local nproc_val
+    nproc_val=$(nproc 2>/dev/null || echo 2)
+    make -j"${nproc_val}"
+    make install
+    ldconfig
+    cd /
+
+    if rigctl -l 2>/dev/null | grep -qi "anytone"; then
+      print_success "Custom Hamlib installed — AnyTone driver verified"
     else
-      print_error "Anytone 578 installer not found"
+      print_warning "Hamlib installed but AnyTone driver not found in rigctl -l"
+    fi
+
+    rm -rf "${hamlib_build}"
+
+    # ── Install Anytone 578 profile ──
+    if [ -f "${at578_dir}/anytone-578.json" ]; then
+      cp "${at578_dir}/anytone-578.json" "${radios_dir}/"
+      chown root:et-data "${radios_dir}/anytone-578.json" 2>/dev/null || true
+      chmod 644 "${radios_dir}/anytone-578.json"
+      print_success "Anytone 578 radio config installed"
+    fi
+
+    mkdir -p "${audio_dir}"
+    if [ -f "${at578_dir}/anytone-578.sh" ]; then
+      cp "${at578_dir}/anytone-578.sh" "${audio_dir}/"
+      chown root:et-data "${audio_dir}/anytone-578.sh" 2>/dev/null || true
+      chmod 755 "${audio_dir}/anytone-578.sh"
+      print_success "Anytone 578 audio script installed"
+    fi
+
+    # Patch udev-tester.sh
+    if [ -f "${at578_dir}/udev-tester.patch" ] && [ -f "${sbin_dir}/udev-tester.sh" ]; then
+      if grep -q '"anytone-578"' "${sbin_dir}/udev-tester.sh"; then
+        print_warning "udev-tester.sh already patched for Anytone 578"
+      else
+        patch "${sbin_dir}/udev-tester.sh" < "${at578_dir}/udev-tester.patch" && \
+          print_success "udev-tester.sh patched for Anytone 578" || \
+          print_warning "Anytone 578 udev-tester patch failed"
+      fi
     fi
   fi
 
+  # 4) AIOC — install JSON, udev rules, direwolf configs, launcher
   if [[ "${_radio[3]}" -eq 1 ]]; then
     print_header "Applying AIOC Support"
-    if [ -f "${src}/radio-tools/aioc/install_aioc.sh" ]; then
-      cd "${src}/radio-tools/aioc"
-      bash install_aioc.sh || \
-        print_warning "AIOC installer returned non-zero"
-      cd /
-    else
-      print_error "AIOC installer not found"
+    local aioc_dir="${src}/radio-tools/aioc"
+
+    # Radio config
+    if [ -f "${aioc_dir}/aioc.json" ]; then
+      cp "${aioc_dir}/aioc.json" "${radios_dir}/"
+      chown root:et-data "${radios_dir}/aioc.json" 2>/dev/null || true
+      chmod 644 "${radios_dir}/aioc.json"
+      print_success "AIOC radio config installed"
+    fi
+
+    # udev rules
+    if [ -f "${aioc_dir}/93-aioc.rules" ]; then
+      cp "${aioc_dir}/93-aioc.rules" "${udev_dir}/"
+      chmod 644 "${udev_dir}/93-aioc.rules"
+      print_success "AIOC udev rules installed"
+    fi
+
+    # DireWolf configs
+    mkdir -p "${direwolf_dir}"
+    for conf in direwolf.aioc-simple.conf direwolf.aioc-packet.conf direwolf.aioc-aprs.conf; do
+      if [ -f "${aioc_dir}/${conf}" ]; then
+        cp "${aioc_dir}/${conf}" "${direwolf_dir}/"
+        chown root:et-data "${direwolf_dir}/${conf}" 2>/dev/null || true
+        chmod 644 "${direwolf_dir}/${conf}"
+        print_success "${conf} installed"
+      fi
+    done
+
+    # Launcher script
+    if [ -f "${aioc_dir}/aioc-direwolf" ]; then
+      cp "${aioc_dir}/aioc-direwolf" "${ETC_BIN_DIR}/"
+      chmod +x "${ETC_BIN_DIR}/aioc-direwolf"
+      print_success "aioc-direwolf launcher installed"
     fi
   fi
 
-  # Desktop shortcuts — install to /etc/skel/Desktop and /usr/share/applications
+  # ── Desktop Shortcuts ──
+
   local desktop_files=(
     "ardop-log-viewer"
     "direwolf-log-viewer"
@@ -374,9 +495,10 @@ cubic_apply_selections() {
   echo
   echo "Items installed to:"
   echo "  • nozzle-menu and helpers → ${ETC_BIN_DIR}/"
-  echo "  • NozzleMods scripts     → /etc/skel/NozzleMods/"
-  echo "  • Desktop shortcuts      → /etc/skel/Desktop/"
-  echo "  • App entries            → /usr/share/applications/"
+  echo "  • Radio configs/patches   → ${radios_dir}/"
+  echo "  • NozzleMods scripts      → /etc/skel/NozzleMods/"
+  echo "  • Desktop shortcuts       → /etc/skel/Desktop/"
+  echo "  • App entries             → /usr/share/applications/"
   echo
   echo "New users created from this ISO will have NozzleMods ready to use."
   echo
