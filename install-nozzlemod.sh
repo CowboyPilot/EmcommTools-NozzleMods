@@ -739,8 +739,6 @@ cubic_apply_selections() {
         if [ -f "${desktop_src}" ]; then
           cp "${desktop_src}" "${skel_desktop}/${df}.desktop"
           chmod +x "${skel_desktop}/${df}.desktop"
-          # Mark trusted so GNOME skips "Allow Launching" for new users
-          setfattr -n user.trusted -v true "${skel_desktop}/${df}.desktop" 2>/dev/null || true
           cp "${desktop_src}" "${apps_dir}/${df}.desktop"
           print_success "Desktop shortcut: ${df}"
         else
@@ -751,16 +749,53 @@ cubic_apply_selections() {
   fi
 
   # ── Desktop icon placement: top-left via dconf system override ──
+  local dconf_profile_dir="/etc/dconf/profile"
   local dconf_dir="/etc/dconf/db/local.d"
-  mkdir -p "${dconf_dir}"
+  mkdir -p "${dconf_profile_dir}" "${dconf_dir}"
+
+  # dconf profile tells GNOME to read the local system database
+  if [ ! -f "${dconf_profile_dir}/user" ]; then
+    cat > "${dconf_profile_dir}/user" <<'PROFILE'
+user-db:user
+system-db:local
+PROFILE
+  fi
+
   cat > "${dconf_dir}/01-nozzlemods-desktop" <<'DCONF'
 [org/gnome/shell/extensions/ding]
 start-corner='top-left'
 DCONF
-  if command -v dconf >/dev/null 2>&1; then
-    dconf update 2>/dev/null || true
-  fi
+  dconf update 2>/dev/null || true
   print_success "Desktop icons set to arrange from top-left"
+
+  # ── First-login autostart: mark .desktop files as trusted ──
+  local autostart_dir="/etc/skel/.config/autostart"
+  local trustscript_dir="/etc/skel/.local/bin"
+  mkdir -p "${autostart_dir}" "${trustscript_dir}"
+
+  cat > "${trustscript_dir}/trust-desktop-icons.sh" <<'TRUSTSCRIPT'
+#!/bin/bash
+# Mark all .desktop files on the Desktop as trusted (runs once at first login)
+for f in ~/Desktop/*.desktop; do
+  [ -f "$f" ] || continue
+  gio set "$f" metadata::trusted true 2>/dev/null
+done
+# Remove ourselves after first run
+rm -f ~/.config/autostart/trust-desktop-icons.desktop
+rm -f ~/.local/bin/trust-desktop-icons.sh
+TRUSTSCRIPT
+  chmod +x "${trustscript_dir}/trust-desktop-icons.sh"
+
+  cat > "${autostart_dir}/trust-desktop-icons.desktop" <<'AUTOSTART'
+[Desktop Entry]
+Type=Application
+Name=Trust Desktop Icons
+Exec=/bin/bash -c "$HOME/.local/bin/trust-desktop-icons.sh"
+Hidden=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+AUTOSTART
+  print_success "First-login autostart will mark desktop icons as trusted"
 
   # ── XARA Enhancements ──
   patch_et_xara
@@ -827,7 +862,6 @@ install_xara_desktop_shortcut() {
   # Mark as trusted so GNOME doesn't show "Allow Launching" prompt
   gio set "${desktop_dir}/xara-status.desktop" metadata::trusted true 2>/dev/null || \
     gio set "${desktop_dir}/xara-status.desktop" metadata::trusted yes 2>/dev/null || true
-  setfattr -n user.trusted -v true "${desktop_dir}/xara-status.desktop" 2>/dev/null || true
 
   # Also install to applications menu
   ${use_sudo} cp "${desktop_src}" "/usr/share/applications/xara-status.desktop" 2>/dev/null || true
