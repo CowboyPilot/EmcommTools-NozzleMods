@@ -223,8 +223,13 @@ cubic_bootstrap_etc() {
   fi
   print_success "Found scripts directory: ${scripts_dir}"
 
-  # 5) Prompt user to copy custom packages into the scripts directory
-  cd "${scripts_dir}"
+  # 5) Prompt user to copy custom packages
+  # Cubic's copy button drops files into ~/ (the prompt's cwd before the
+  # script started), so we snapshot ~/ before, let them copy, then move
+  # any new files into the scripts directory.
+  local home_before
+  home_before=$(ls -1 ~/  2>/dev/null)
+
   echo
   echo -e "${YELLOW}╔════════════════════════════════════════════════════════════╗${NC}"
   echo -e "${YELLOW}║              Copy Custom Packages (Optional)              ║${NC}"
@@ -233,13 +238,26 @@ cubic_bootstrap_etc() {
   echo "If you have custom packages (e.g. pfte, xara-1.2.0.tar.gz),"
   echo "use the Cubic copy button (top-left) to copy them now."
   echo
-  echo "The current directory is set to the ETC scripts directory:"
+  echo "Files will be automatically moved into the ETC scripts directory:"
   echo -e "  ${BLUE}${scripts_dir}${NC}"
-  echo
-  echo "Cubic will drop copied files here so install.sh can find them."
   echo
   echo -e "${BLUE}Press Enter when ready to continue...${NC}"
   read -r </dev/tty
+
+  # Move any new files from ~/ into the scripts directory
+  local home_after
+  home_after=$(ls -1 ~/ 2>/dev/null)
+  local new_files
+  new_files=$(comm -13 <(echo "${home_before}") <(echo "${home_after}"))
+  if [[ -n "${new_files}" ]]; then
+    print_info "Moving copied files to scripts directory..."
+    while IFS= read -r f; do
+      if [[ -n "${f}" ]]; then
+        mv ~/"${f}" "${scripts_dir}/"
+        print_success "Moved ${f} → ${scripts_dir}/"
+      fi
+    done <<< "${new_files}"
+  fi
 
   # 6) Ask about NozzleMod Hamlib (AT578 branch)
   echo
@@ -298,6 +316,17 @@ cubic_bootstrap_etc() {
   patch_et_xara
 
   # 9) Prompt to copy files to the ISO desktop
+  local skel_desktop="/etc/skel/Desktop"
+  mkdir -p "${skel_desktop}"
+
+  if command -v xara >/dev/null 2>&1; then
+    mkdir -p "${skel_desktop}/xara/hf_keying" "${skel_desktop}/xara/fm_keying"
+    print_success "Created xara keying directories in skeleton desktop"
+  fi
+
+  local home_before_desktop
+  home_before_desktop=$(ls -1 ~/ 2>/dev/null)
+
   echo
   echo -e "${YELLOW}╔════════════════════════════════════════════════════════════╗${NC}"
   echo -e "${YELLOW}║              Copy Files to ISO Desktop (Optional)         ║${NC}"
@@ -306,8 +335,8 @@ cubic_bootstrap_etc() {
   echo "If you have files you'd like on every user's desktop in the ISO,"
   echo "use the Cubic copy button (top-left) to copy them now."
   echo
-  echo "The current directory has been set to /etc/skel/Desktop so"
-  echo "Cubic will place copied files directly on the desktop."
+  echo "Files will be automatically moved to:"
+  echo -e "  ${BLUE}${skel_desktop}${NC}"
   echo
   if command -v xara >/dev/null 2>&1; then
     echo -e "${BLUE}Xara was installed successfully.${NC}"
@@ -315,14 +344,24 @@ cubic_bootstrap_etc() {
     echo "  • Desktop/xara/hf_keying"
     echo "  • Desktop/xara/fm_keying"
     echo
-    mkdir -p /etc/skel/Desktop/xara/hf_keying /etc/skel/Desktop/xara/fm_keying
-    print_success "Created xara keying directories in skeleton desktop"
-    echo
   fi
-  cd /etc/skel/Desktop
   echo -e "${BLUE}Press Enter when ready to continue...${NC}"
   read -r </dev/tty
-  cd /
+
+  # Move any new files from ~/ into skel Desktop
+  local home_after_desktop
+  home_after_desktop=$(ls -1 ~/ 2>/dev/null)
+  local new_desktop_files
+  new_desktop_files=$(comm -13 <(echo "${home_before_desktop}") <(echo "${home_after_desktop}"))
+  if [[ -n "${new_desktop_files}" ]]; then
+    print_info "Moving copied files to skeleton desktop..."
+    while IFS= read -r f; do
+      if [[ -n "${f}" ]]; then
+        mv ~/"${f}" "${skel_desktop}/"
+        print_success "Moved ${f} → ${skel_desktop}/"
+      fi
+    done <<< "${new_desktop_files}"
+  fi
 
   echo
   print_success "ETC bootstrap complete — continuing with NozzleMods..."
