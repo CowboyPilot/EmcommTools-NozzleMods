@@ -287,30 +287,21 @@ cubic_bootstrap_etc() {
 
       if [[ -f "${xara_tmp}/xara-src.zip" ]]; then
         print_info "Repackaging xara for ETC install-xara.sh..."
+
+        # The zip extracts flat (no wrapper directory), so extract directly
+        # into a directory named "xara" — the name install-xara.sh expects
+        mkdir -p "${xara_tmp}/xara"
         cd "${xara_tmp}"
-        unzip -q xara-src.zip
+        unzip -q xara-src.zip -d xara
 
-        # Find the extracted directory (expect xara-55B2 or similar)
-        local xara_extracted
-        xara_extracted=$(find . -maxdepth 1 -type d -name 'xara*' ! -name '.' | head -1)
-
-        if [[ -n "${xara_extracted}" && -d "${xara_extracted}" ]]; then
-          # Read version from Cargo.toml
-          local xara_version="0.0.0"
-          if [[ -f "${xara_extracted}/Cargo.toml" ]]; then
-            xara_version=$(grep -m1 '^version' "${xara_extracted}/Cargo.toml" \
-              | sed 's/.*"\(.*\)".*/\1/')
-          fi
-
-          # Rename to "xara" (what install-xara.sh expects as top-level dir)
-          mv "${xara_extracted}" xara
-
-          # Create the tarball in ETC's expected format
-          tar czf "${scripts_dir}/xara-${xara_version}.tar.gz" xara
-          print_success "Created xara-${xara_version}.tar.gz in scripts directory"
-        else
-          print_warning "Could not find extracted xara directory — skipping repackage"
+        local xara_version="0.0.0"
+        if [[ -f "xara/Cargo.toml" ]]; then
+          xara_version=$(grep -m1 '^version' "xara/Cargo.toml" \
+            | sed 's/.*"\(.*\)".*/\1/')
         fi
+
+        tar czf "${scripts_dir}/xara-${xara_version}.tar.gz" xara
+        print_success "Created xara-${xara_version}.tar.gz in scripts directory"
 
         cd "${scripts_dir}"
         rm -rf "${xara_tmp}"
