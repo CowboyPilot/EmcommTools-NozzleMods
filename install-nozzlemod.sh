@@ -259,6 +259,64 @@ cubic_bootstrap_etc() {
     done <<< "${new_files}"
   fi
 
+  # 5b) Auto-download xara if no tarball present
+  if ! ls "${scripts_dir}"/xara-*.tar.gz >/dev/null 2>&1; then
+    echo
+    print_info "No xara tarball found in scripts directory."
+    echo -e "${BLUE}Download xara automatically? (Y/n):${NC}"
+    echo -n "> "
+    read -r xara_dl_choice </dev/tty
+    xara_dl_choice=$(echo "${xara_dl_choice}" | tr '[:upper:]' '[:lower:]')
+
+    if [[ "${xara_dl_choice}" != "n" && "${xara_dl_choice}" != "no" ]]; then
+      local xara_zip_url="https://anonymous.4open.science/api/repo/xara-55B2/zip"
+      local xara_tmp="/tmp/xara-download-$$"
+      mkdir -p "${xara_tmp}"
+
+      print_info "Downloading xara source..."
+      if command -v wget >/dev/null 2>&1; then
+        wget -q --show-progress -O "${xara_tmp}/xara-src.zip" "${xara_zip_url}"
+      elif command -v curl >/dev/null 2>&1; then
+        curl -L -o "${xara_tmp}/xara-src.zip" "${xara_zip_url}"
+      else
+        print_warning "Neither wget nor curl available — cannot download xara"
+      fi
+
+      if [[ -f "${xara_tmp}/xara-src.zip" ]]; then
+        print_info "Repackaging xara for ETC install-xara.sh..."
+        cd "${xara_tmp}"
+        unzip -q xara-src.zip
+
+        # Find the extracted directory (expect xara-55B2 or similar)
+        local xara_extracted
+        xara_extracted=$(find . -maxdepth 1 -type d -name 'xara*' ! -name '.' | head -1)
+
+        if [[ -n "${xara_extracted}" && -d "${xara_extracted}" ]]; then
+          # Read version from Cargo.toml
+          local xara_version="0.0.0"
+          if [[ -f "${xara_extracted}/Cargo.toml" ]]; then
+            xara_version=$(grep -m1 '^version' "${xara_extracted}/Cargo.toml" \
+              | sed 's/.*"\(.*\)".*/\1/')
+          fi
+
+          # Rename to "xara" (what install-xara.sh expects as top-level dir)
+          mv "${xara_extracted}" xara
+
+          # Create the tarball in ETC's expected format
+          tar czf "${scripts_dir}/xara-${xara_version}.tar.gz" xara
+          print_success "Created xara-${xara_version}.tar.gz in scripts directory"
+        else
+          print_warning "Could not find extracted xara directory — skipping repackage"
+        fi
+
+        cd "${scripts_dir}"
+        rm -rf "${xara_tmp}"
+      fi
+    fi
+  else
+    print_success "xara tarball already present in scripts directory"
+  fi
+
   # 6) Ask about NozzleMod Hamlib (AT578 branch)
   echo
   echo -e "${BLUE}Will you be installing the NozzleMod AT578 Hamlib branch? (Y/n):${NC}"
@@ -836,7 +894,7 @@ patch_et_xara() {
   else
     local use_sudo=""
     [ ! -w "${et_xara}" ] && use_sudo="sudo"
-    ${use_sudo} sed -i 's|--ptt ${PTT}$|--ptt ${PTT} \\\n  --ui-port 8081 \\\n  --ui-addr 127.0.0.1 \\\n  --waveform auto \\\n  --hf-keying-dir="${HOME}/Desktop/xara/hf_keying" \\\n  --fm-keying-dir="${HOME}/Desktop/xara/fm_keying"|' "${et_xara}"
+    ${use_sudo} sed -i 's|--ptt ${PTT}$|--ptt ${PTT} \\\n  --ui-port 8081 \\\n  --ui-addr 127.0.0.1 \\\n  --waveform auto \\\n  --hf-keying-dir "${HOME}/Desktop/xara/hf_keying" \\\n  --fm-keying-dir "${HOME}/Desktop/xara/fm_keying"|' "${et_xara}"
     if grep -q -- '--ui-port' "${et_xara}"; then
       print_success "et-xara patched"
     else
