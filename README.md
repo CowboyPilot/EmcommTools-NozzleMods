@@ -18,10 +18,10 @@ chmod +x install-nozzlemod.sh
 
 ### Cubic ISO Builder Mode
 
-When building a custom ETC ISO with [Cubic](https://github.com/PJ-Singh-001/Cubic), the installer auto-detects the chroot environment and presents an interactive menu for selecting which mods to bake into the ISO. In the Cubic terminal:
+When building a custom ETC ISO with [Cubic](https://github.com/PJ-Singh-001/Cubic), the installer auto-detects the chroot environment and presents an interactive menu for selecting which mods to bake into the ISO. In the Cubic terminal (curl is not installed by default in the chroot):
 
 ```bash
-curl -fsSLo /tmp/install-nozzlemod.sh https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install-nozzlemod.sh && bash /tmp/install-nozzlemod.sh
+wget -qO /tmp/install-nozzlemod.sh https://raw.githubusercontent.com/CowboyPilot/EmcommTools-NozzleMods/main/install-nozzlemod.sh && bash /tmp/install-nozzlemod.sh
 ```
 
 ## What Gets Installed
