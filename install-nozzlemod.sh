@@ -235,8 +235,11 @@ cubic_bootstrap_etc() {
   echo -e "${YELLOW}║              Copy Custom Packages (Optional)              ║${NC}"
   echo -e "${YELLOW}╚════════════════════════════════════════════════════════════╝${NC}"
   echo
-  echo "If you have custom packages (e.g. pfte, xara-1.2.0.tar.gz),"
+  echo "If you have custom packages (e.g. pfte, xara tarball),"
   echo "use the Cubic copy button (top-left) to copy them now."
+  echo
+  echo "If you don't provide a xara tarball, the script will offer to"
+  echo "download the latest XaraNext from Open Science automatically."
   echo
   echo "Files will be automatically moved into the ETC scripts directory:"
   echo -e "  ${BLUE}${scripts_dir}${NC}"
